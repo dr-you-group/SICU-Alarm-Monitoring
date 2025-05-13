@@ -208,7 +208,7 @@ class WaveformWidget(QWidget):
 class SICUMonitoring(QMainWindow):
     def __init__(self):
         super().__init__()
-        # 현재 날짜 초기화
+        # 현재 날짜 초기화 (화면에 표시되지 않은 기본값)
         self.current_date = QDate.currentDate()
         self.selected_alarm_color = "None"
         self.has_selected_date = False  # 날짜 선택 여부 플래그
@@ -309,11 +309,9 @@ class SICUMonitoring(QMainWindow):
         self.date_button.setFixedWidth(DATE_PICKER_WIDTH)
         info_layout.addWidget(self.date_button)
         
-        # 선택 알람 통합 레이블 (상태 및 시간 표시)
-        self.alarm_info_label = QLabel(f"선택 알람: {self.selected_alarm_color} (2025-05-02 12:29:24.085)")
-        
-        # 선택된 알람 색상에 따라 텍스트 색상 설정
-        self.updateAlarmInfoStyle()
+        # 선택 알람 통합 레이블 (초기에는 비운 내용)
+        self.alarm_info_label = QLabel("환자 정보를 불러오고 날짜를 선택해주세요")
+        self.alarm_info_label.setStyleSheet("color: #888888; font-size: 14px;")
         
         info_layout.addWidget(self.alarm_info_label)
         info_layout.addStretch()
@@ -377,25 +375,118 @@ class SICUMonitoring(QMainWindow):
         content_layout = QVBoxLayout(content_container)
         content_layout.setContentsMargins(0, 0, 0, 0)
         
-        # 메인 스플리터
+        # 메인 스플리터 (3개 패널)
         splitter = QSplitter(Qt.Horizontal)
         splitter.setChildrenCollapsible(False)
         
         # 좌측 프레임 (파형)
         left_frame = self.createLeftFrame()
         
+        # 중앙 프레임 (의료 지표)
+        middle_frame = self.createMiddleFrame()
+        
         # 우측 프레임 (간호기록)
         right_frame = self.createRightFrame()
         
         # 스플리터에 프레임 추가
         splitter.addWidget(left_frame)
+        splitter.addWidget(middle_frame)
         splitter.addWidget(right_frame)
         
-        # 크기 비율 설정 (좌:우 = 3:2)
-        splitter.setSizes([300, 200])
+        # 크기 비율 설정 - 타임라인과 정확히 일치
+        # 0h~12h: 50%, 12h~18h: 25%, 18h~24h: 25%
         
+        # 레이아웃에 추가 후 정확한 비율 설정
         content_layout.addWidget(splitter)
+        
+        # 비율 조정을 위한 명시적 설정
+        splitter.setStretchFactor(0, 12)  # 12시간
+        splitter.setStretchFactor(1, 6)   # 6시간
+        splitter.setStretchFactor(2, 6)   # 6시간
+        
         return content_container
+    
+    def createMiddleFrame(self):
+        # 중앙 프레임 (의료 지표 영역)
+        middle_frame = QFrame()
+        middle_frame.setFrameShape(QFrame.Box)
+        middle_frame.setFrameShadow(QFrame.Plain)
+        middle_frame.setLineWidth(1)
+        middle_layout = QVBoxLayout(middle_frame)
+        middle_layout.setContentsMargins(5, 5, 5, 5)
+        middle_layout.setSpacing(0)  # 컴포넌트 간 간격 제거
+        
+        # 헤더 섹션 (Medical Indicators 레이블)
+        header_widget = QWidget()
+        header_widget.setFixedHeight(HEADER_HEIGHT)
+        header_layout = QHBoxLayout(header_widget)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        
+        indicators_label = QLabel("Numueric Data")
+        indicators_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        header_layout.addWidget(indicators_label)
+        header_layout.addStretch()
+        
+        # 헤더와 내용 위젯 사이 구분선
+        header_line = QFrame()
+        header_line.setFrameShape(QFrame.HLine)
+        header_line.setFrameShadow(QFrame.Sunken)
+        
+        # 날짜와 알람이 선택되지 않았을 때 표시할 안내 레이블
+        self.medical_info_label = QLabel("날짜와 알람을 선택하세요")
+        self.medical_info_label.setAlignment(Qt.AlignCenter)
+        self.medical_info_label.setStyleSheet("color: #888888; font-size: 14px;")
+        
+        # 의료 지표 테이블
+        self.medical_table = QTableWidget(13, 2)
+        self.medical_table.setHorizontalHeaderLabels(["항목", "내용"])
+        self.medical_table.setStyleSheet("QTableWidget::item { border-bottom: 1px solid #444; }")
+        
+        medical_items = {
+            "ST": "",
+            "QTc": "",
+            "Tskin": "",
+            "ABPs": "",
+            "ABPd": "",
+            "ABPm": "",
+            "NBPPs": "",
+            "NBPd": "",
+            "Perf": "",
+            "SpO2": "",
+            "PPV": "",
+            "Percent irregular": "",
+            "Percent poor signal": ""
+        }
+        
+        for i, (k, v) in enumerate(medical_items.items()):
+            item_widget = QTableWidgetItem(k)
+            self.medical_table.setItem(i, 0, item_widget)
+            content_widget = QTableWidgetItem(v)
+            self.medical_table.setItem(i, 1, content_widget)
+            
+            # 읽기 전용으로 설정
+            item_widget.setFlags(item_widget.flags() & ~Qt.ItemIsEditable)
+            content_widget.setFlags(content_widget.flags() & ~Qt.ItemIsEditable)
+        
+        # 첫 번째 열은 고정 너비, 두 번째 열은 늘어남
+        self.medical_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
+        self.medical_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.medical_table.setColumnWidth(0, 150)  # "항목" 열 고정 너비
+        
+        self.medical_table.verticalHeader().setVisible(False)
+        self.medical_table.setAlternatingRowColors(True)
+        self.medical_table.setStyleSheet("alternate-background-color: #2A2A2A;")
+        
+        # 레이아웃에 헤더, 구분선, 안내 레이블, 테이블 추가
+        middle_layout.addWidget(header_widget)
+        middle_layout.addWidget(header_line)
+        middle_layout.addWidget(self.medical_info_label)
+        middle_layout.addWidget(self.medical_table)
+        
+        # 초기에는 테이블 숨김
+        self.medical_table.setVisible(False)
+        
+        return middle_frame
     
     def createLeftFrame(self):
         # 좌측 프레임 (파형 표시 영역)
@@ -472,22 +563,31 @@ class SICUMonitoring(QMainWindow):
         self.record_info_label.setStyleSheet("color: #888888; font-size: 14px;")
         right_layout.addWidget(self.record_info_label)
         
-        # 간호기록 테이블
-        self.record_table = QTableWidget(8, 2)
+        # 간호기록 테이블: 들
+        self.record_table = QTableWidget(26, 2)
         self.record_table.setHorizontalHeaderLabels(["항목", "내용"])
         self.record_table.setStyleSheet("QTableWidget::item { border-bottom: 1px solid #444; }")
         
-        # 항목 설정
-        items = ["연구등록번호", "시행일시", "간호중재(코드명)", "간호활동(코드명)", "간호속성코드(코드명)", "간호속성명칭", "속성", "Duty(코드명)"]
-        for i, item in enumerate(items):
-            item_widget = QTableWidgetItem(item)
+        items = {
+            "간호중재(코드명)": "",
+            "간호활동(코드명)": "",
+            "간호속성코드(코드명)": "",
+            "속성": "",
+            "Duty(코드명)": "",
+            "시행일시": "",
+        }
+        
+        for i, (k, v) in enumerate(items.items()):
+            print('nursing record: ', k, v)
+            item_widget = QTableWidgetItem(k)
             self.record_table.setItem(i, 0, item_widget)
-            content_widget = QTableWidgetItem("")
+            content_widget = QTableWidgetItem(v)
             self.record_table.setItem(i, 1, content_widget)
             
             # 읽기 전용으로 설정
             item_widget.setFlags(item_widget.flags() & ~Qt.ItemIsEditable)
             content_widget.setFlags(content_widget.flags() & ~Qt.ItemIsEditable)
+            
         
         # 첫 번째 열은 고정 너비, 두 번째 열은 늘어남
         self.record_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
@@ -632,9 +732,11 @@ class SICUMonitoring(QMainWindow):
         self.calendar.hide()
         self.has_selected_date = True  # 날짜 선택 플래그 설정
         
-        # 날짜만 선택하고 알람은 아직 선택하지 않은 경우
-        if not self.has_selected_alarm:
-            self.update_content_visibility()
+        # 날짜 선택 시 알람 선택 상태 초기화
+        self.has_selected_alarm = False
+        
+        # 컨텐츠 표시 업데이트 (날짜만 선택되고 알람은 선택안됨)
+        self.update_content_visibility()
     
     def set_date(self, date):
         # 날짜 설정 및 관련 UI 업데이트
@@ -662,11 +764,8 @@ class SICUMonitoring(QMainWindow):
         # 타임라인 위젯에 알람 데이터 설정
         self.timeline_widget.set_alarms(alarms)
         
-        # 기본 선택된 알람이 있으면 표시
-        if alarms:
-            self.update_selected_alarm(alarms[0]["color"], alarms[0]["time"])
-        else:
-            self.update_selected_alarm("None", "00:00:00")
+        # 날짜 선택 시 기본 알람 정보는 "None"으로 설정 (시간 없이)
+        self.update_selected_alarm("None", "")
     
     def on_alarm_selected(self, alarm):
         # 타임라인에서 알람 선택 시 호출됨
@@ -686,14 +785,18 @@ class SICUMonitoring(QMainWindow):
         
         # 데이터 로드
         self.load_waveform_data()
+        self.load_medical_indicators()
         self.load_nursing_record()
     
     def update_content_visibility(self):
         # 날짜와 알람 선택 상태에 따라 콘텐츠 표시 여부 업데이트
         if self.has_selected_date and self.has_selected_alarm:
-            # 날짜와 알람이 모두 선택된 경우, 그래프와 간호기록 표시
+            # 날짜와 알람이 모두 선택된 경우, 그래프, 의료지표, 간호기록 표시
             self.waveform_info_label.setVisible(False)
             self.waveform_widget.setVisible(True)
+            
+            self.medical_info_label.setVisible(False)
+            self.medical_table.setVisible(True)
             
             self.record_info_label.setVisible(False)
             self.record_table.setVisible(True)
@@ -701,6 +804,9 @@ class SICUMonitoring(QMainWindow):
             # 날짜나 알람이 선택되지 않은 경우, 안내 메시지 표시
             self.waveform_info_label.setVisible(True)
             self.waveform_widget.setVisible(False)
+            
+            self.medical_info_label.setVisible(True)
+            self.medical_table.setVisible(False)
             
             self.record_info_label.setVisible(True)
             self.record_table.setVisible(False)
@@ -714,6 +820,11 @@ class SICUMonitoring(QMainWindow):
         # 선택된 알람에 따라 간호기록 로드 (예시 용도)
         print(f"간호기록 로드: {self.selected_alarm_color}")
         # 실제 구현에서는 알람과 연관된 간호기록 로드
+    
+    def load_medical_indicators(self):
+        # 선택된 알람에 따라 의료 지표 로드 (예시 용도)
+        print(f"의료 지표 로드: {self.selected_alarm_color}")
+        # 실제 구현에서는 알람과 연관된 의료 지표 로드
     
     def search_patient(self):
         # 환자 ID로 데이터 검색
@@ -730,8 +841,9 @@ class SICUMonitoring(QMainWindow):
         # 타임라인 초기화 (비운 알람 리스트로 설정)
         self.timeline_widget.set_alarms([])
         
-        # 기본 선택된 알람 정보 초기화
-        self.update_selected_alarm("None", "00:00:00")
+        # 기본 선택된 알람 정보 초기화 (비운 상태)
+        self.alarm_info_label.setText("날짜를 선택해주세요")
+        self.alarm_info_label.setStyleSheet("color: #888888; font-size: 14px;")
         
         # 선택 상태 플래그 초기화
         self.has_selected_date = False
@@ -743,17 +855,22 @@ class SICUMonitoring(QMainWindow):
     def update_selected_alarm(self, color, time_str):
         # 선택 알람 정보 업데이트
         self.selected_alarm_color = color
-        # 현재 날짜를 포함한 타임스탬프 생성
-        date_str = self.current_date.toString("yyyy-MM-dd")
-        timestamp = f"{date_str} {time_str}"
         
-        # 레이블 텍스트 업데이트
-        self.alarm_info_label.setText(f"선택 알람: {color} ({timestamp})")
+        # 알람이 선택되지 않은 경우 (색상이 "None")
+        if color == "None":
+            # 시간 없이 날짜만 표시
+            date_str = self.current_date.toString("yyyy-MM-dd")
+            self.alarm_info_label.setText(f"선택 알람: None ({date_str})")
+        else:
+            # 알람이 선택된 경우 날짜와 시간 모두 표시
+            date_str = self.current_date.toString("yyyy-MM-dd")
+            timestamp = f"{date_str} {time_str}"
+            self.alarm_info_label.setText(f"선택 알람: {color} ({timestamp})")
         
         # 스타일 업데이트
         self.updateAlarmInfoStyle()
         
-        print(f"선택 알람 정보 업데이트: {color} ({timestamp})")
+        print(f"선택 알람 정보 업데이트: {color}")
     
     def save_comment(self):
         # 코멘트 저장
