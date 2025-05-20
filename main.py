@@ -375,118 +375,26 @@ class SICUMonitoring(QMainWindow):
         content_layout = QVBoxLayout(content_container)
         content_layout.setContentsMargins(0, 0, 0, 0)
         
-        # 메인 스플리터 (3개 패널)
+        # 메인 스플리터 (2개 패널)
         splitter = QSplitter(Qt.Horizontal)
         splitter.setChildrenCollapsible(False)
         
         # 좌측 프레임 (파형)
         left_frame = self.createLeftFrame()
         
-        # 중앙 프레임 (의료 지표)
-        middle_frame = self.createMiddleFrame()
-        
         # 우측 프레임 (간호기록)
         right_frame = self.createRightFrame()
         
         # 스플리터에 프레임 추가
         splitter.addWidget(left_frame)
-        splitter.addWidget(middle_frame)
         splitter.addWidget(right_frame)
         
-        # 크기 비율 설정 - 타임라인과 정확히 일치
-        # 0h~12h: 50%, 12h~18h: 25%, 18h~24h: 25%
+        # 크기 비율 설정 (좌:우 = 3:2)
+        splitter.setSizes([300, 200])
         
-        # 레이아웃에 추가 후 정확한 비율 설정
         content_layout.addWidget(splitter)
         
-        # 비율 조정을 위한 명시적 설정
-        splitter.setStretchFactor(0, 12)  # 12시간
-        splitter.setStretchFactor(1, 6)   # 6시간
-        splitter.setStretchFactor(2, 6)   # 6시간
-        
         return content_container
-    
-    def createMiddleFrame(self):
-        # 중앙 프레임 (의료 지표 영역)
-        middle_frame = QFrame()
-        middle_frame.setFrameShape(QFrame.Box)
-        middle_frame.setFrameShadow(QFrame.Plain)
-        middle_frame.setLineWidth(1)
-        middle_layout = QVBoxLayout(middle_frame)
-        middle_layout.setContentsMargins(5, 5, 5, 5)
-        middle_layout.setSpacing(0)  # 컴포넌트 간 간격 제거
-        
-        # 헤더 섹션 (Medical Indicators 레이블)
-        header_widget = QWidget()
-        header_widget.setFixedHeight(HEADER_HEIGHT)
-        header_layout = QHBoxLayout(header_widget)
-        header_layout.setContentsMargins(0, 0, 0, 0)
-        
-        indicators_label = QLabel("Numueric Data")
-        indicators_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        header_layout.addWidget(indicators_label)
-        header_layout.addStretch()
-        
-        # 헤더와 내용 위젯 사이 구분선
-        header_line = QFrame()
-        header_line.setFrameShape(QFrame.HLine)
-        header_line.setFrameShadow(QFrame.Sunken)
-        
-        # 날짜와 알람이 선택되지 않았을 때 표시할 안내 레이블
-        self.medical_info_label = QLabel("날짜와 알람을 선택하세요")
-        self.medical_info_label.setAlignment(Qt.AlignCenter)
-        self.medical_info_label.setStyleSheet("color: #888888; font-size: 14px;")
-        
-        # 의료 지표 테이블
-        self.medical_table = QTableWidget(13, 2)
-        self.medical_table.setHorizontalHeaderLabels(["항목", "내용"])
-        self.medical_table.setStyleSheet("QTableWidget::item { border-bottom: 1px solid #444; }")
-        
-        medical_items = {
-            "ST": "",
-            "QTc": "",
-            "Tskin": "",
-            "ABPs": "",
-            "ABPd": "",
-            "ABPm": "",
-            "NBPPs": "",
-            "NBPd": "",
-            "Perf": "",
-            "SpO2": "",
-            "PPV": "",
-            "Percent irregular": "",
-            "Percent poor signal": ""
-        }
-        
-        for i, (k, v) in enumerate(medical_items.items()):
-            item_widget = QTableWidgetItem(k)
-            self.medical_table.setItem(i, 0, item_widget)
-            content_widget = QTableWidgetItem(v)
-            self.medical_table.setItem(i, 1, content_widget)
-            
-            # 읽기 전용으로 설정
-            item_widget.setFlags(item_widget.flags() & ~Qt.ItemIsEditable)
-            content_widget.setFlags(content_widget.flags() & ~Qt.ItemIsEditable)
-        
-        # 첫 번째 열은 고정 너비, 두 번째 열은 늘어남
-        self.medical_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
-        self.medical_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-        self.medical_table.setColumnWidth(0, 150)  # "항목" 열 고정 너비
-        
-        self.medical_table.verticalHeader().setVisible(False)
-        self.medical_table.setAlternatingRowColors(True)
-        self.medical_table.setStyleSheet("alternate-background-color: #2A2A2A;")
-        
-        # 레이아웃에 헤더, 구분선, 안내 레이블, 테이블 추가
-        middle_layout.addWidget(header_widget)
-        middle_layout.addWidget(header_line)
-        middle_layout.addWidget(self.medical_info_label)
-        middle_layout.addWidget(self.medical_table)
-        
-        # 초기에는 테이블 숨김
-        self.medical_table.setVisible(False)
-        
-        return middle_frame
     
     def createLeftFrame(self):
         # 좌측 프레임 (파형 표시 영역)
@@ -563,7 +471,7 @@ class SICUMonitoring(QMainWindow):
         self.record_info_label.setStyleSheet("color: #888888; font-size: 14px;")
         right_layout.addWidget(self.record_info_label)
         
-        # 간호기록 테이블: 들
+        # 간호기록 테이블
         self.record_table = QTableWidget(26, 2)
         self.record_table.setHorizontalHeaderLabels(["항목", "내용"])
         self.record_table.setStyleSheet("QTableWidget::item { border-bottom: 1px solid #444; }")
@@ -785,18 +693,14 @@ class SICUMonitoring(QMainWindow):
         
         # 데이터 로드
         self.load_waveform_data()
-        self.load_medical_indicators()
         self.load_nursing_record()
     
     def update_content_visibility(self):
         # 날짜와 알람 선택 상태에 따라 콘텐츠 표시 여부 업데이트
         if self.has_selected_date and self.has_selected_alarm:
-            # 날짜와 알람이 모두 선택된 경우, 그래프, 의료지표, 간호기록 표시
+            # 날짜와 알람이 모두 선택된 경우, 그래프와 간호기록 표시
             self.waveform_info_label.setVisible(False)
             self.waveform_widget.setVisible(True)
-            
-            self.medical_info_label.setVisible(False)
-            self.medical_table.setVisible(True)
             
             self.record_info_label.setVisible(False)
             self.record_table.setVisible(True)
@@ -804,9 +708,6 @@ class SICUMonitoring(QMainWindow):
             # 날짜나 알람이 선택되지 않은 경우, 안내 메시지 표시
             self.waveform_info_label.setVisible(True)
             self.waveform_widget.setVisible(False)
-            
-            self.medical_info_label.setVisible(True)
-            self.medical_table.setVisible(False)
             
             self.record_info_label.setVisible(True)
             self.record_table.setVisible(False)
@@ -820,11 +721,6 @@ class SICUMonitoring(QMainWindow):
         # 선택된 알람에 따라 간호기록 로드 (예시 용도)
         print(f"간호기록 로드: {self.selected_alarm_color}")
         # 실제 구현에서는 알람과 연관된 간호기록 로드
-    
-    def load_medical_indicators(self):
-        # 선택된 알람에 따라 의료 지표 로드 (예시 용도)
-        print(f"의료 지표 로드: {self.selected_alarm_color}")
-        # 실제 구현에서는 알람과 연관된 의료 지표 로드
     
     def search_patient(self):
         # 환자 ID로 데이터 검색
