@@ -18,111 +18,58 @@ class PatientData:
         # 환자 데이터 (한 명만 정의)
         self.patients = {
             "1160 4980": {
-                "admission_period": "24/04/01 — 25/08/09",
+                # 입원 기간을 리스트로 관리
+                "admission_periods": [
+                    {"start": "24/04/01", "end": "24/06/15", "id": "admission1"},
+                    {"start": "24/08/20", "end": "24/12/05", "id": "admission2"},
+                    {"start": "25/02/10", "end": "25/08/09", "id": "admission3"}
+                ],
+                # 각 입원 기간별로 알람 데이터 관리
                 "alarms": {
-                    "2025-05-01": [
-                        {"time": "02:15:30", "color": "Red", "id": "2025-05-01-02:15:30-1160 4980", "timestamp": "2025-05-01 02:15:30"},
-                        {"time": "05:45:12", "color": "Yellow", "id": "2025-05-01-05:45:12-1160 4980", "timestamp": "2025-05-01 05:45:12"},
-                        {"time": "09:22:05", "color": "SilentCyan", "id": "2025-05-01-09:22:05-1160 4980", "timestamp": "2025-05-01 09:22:05"},
-                        {"time": "14:08:45", "color": "White", "id": "2025-05-01-14:08:45-1160 4980", "timestamp": "2025-05-01 14:08:45"},
-                        {"time": "19:35:22", "color": "Red", "id": "2025-05-01-19:35:22-1160 4980", "timestamp": "2025-05-01 19:35:22"}
-                    ],
-                    "2025-05-02": [
-                        {"time": "01:30:20", "color": "Cyan", "id": "2025-05-02-01:30:20-1160 4980", "timestamp": "2025-05-02 01:30:20"},
-                        {"time": "07:12:43", "color": "ShortYellow", "id": "2025-05-02-07:12:43-1160 4980", "timestamp": "2025-05-02 07:12:43"},
-                        {"time": "12:29:24", "color": "Red", "id": "2025-05-02-12:29:24-1160 4980", "timestamp": "2025-05-02 12:29:24"},
-                        {"time": "18:57:10", "color": "Yellow", "id": "2025-05-02-18:57:10-1160 4980", "timestamp": "2025-05-02 18:57:10"}
-                    ],
-                    "2025-05-03": [
-                        {"time": "04:10:15", "color": "White", "id": "2025-05-03-04:10:15-1160 4980", "timestamp": "2025-05-03 04:10:15"},
-                        {"time": "10:25:33", "color": "Red", "id": "2025-05-03-10:25:33-1160 4980", "timestamp": "2025-05-03 10:25:33"},
-                        {"time": "16:45:18", "color": "SilentCyan", "id": "2025-05-03-16:45:18-1160 4980", "timestamp": "2025-05-03 16:45:18"},
-                        {"time": "22:05:49", "color": "Yellow", "id": "2025-05-03-22:05:49-1160 4980", "timestamp": "2025-05-03 22:05:49"}
-                    ]
-                },
-                
-                # Base64로 인코딩된 파형 데이터
-                "waveforms": {
-                    "2025-05-01 02:15:30": {
-                        "ABP": self._generate_base64_waveform(),
-                        "Lead-II": self._generate_base64_waveform(),
-                        "Resp": self._generate_base64_waveform(),
-                        "Pleth": self._generate_base64_waveform()
+                    "admission1": {
+                        "2024-04-05": [
+                            {"time": "03:15:30", "color": "Red", "id": "2024-04-05-03:15:30-1160 4980", "timestamp": "2024-04-05 03:15:30"}
+                        ],
+                        "2024-05-10": [
+                            {"time": "07:45:12", "color": "Yellow", "id": "2024-05-10-07:45:12-1160 4980", "timestamp": "2024-05-10 07:45:12"},
+                            {"time": "14:22:05", "color": "SilentCyan", "id": "2024-05-10-14:22:05-1160 4980", "timestamp": "2024-05-10 14:22:05"}
+                        ]
                     },
-                    "2025-05-01 05:45:12": {
-                        "ABP": self._generate_base64_waveform(),
-                        "Lead-II": self._generate_base64_waveform(),
-                        "Resp": self._generate_base64_waveform(),
-                        "Pleth": self._generate_base64_waveform()
+                    "admission2": {
+                        "2024-09-15": [
+                            {"time": "05:30:20", "color": "Cyan", "id": "2024-09-15-05:30:20-1160 4980", "timestamp": "2024-09-15 05:30:20"},
+                            {"time": "11:42:43", "color": "ShortYellow", "id": "2024-09-15-11:42:43-1160 4980", "timestamp": "2024-09-15 11:42:43"}
+                        ],
+                        "2024-10-20": [
+                            {"time": "09:29:24", "color": "Red", "id": "2024-10-20-09:29:24-1160 4980", "timestamp": "2024-10-20 09:29:24"},
+                            {"time": "17:57:10", "color": "Yellow", "id": "2024-10-20-17:57:10-1160 4980", "timestamp": "2024-10-20 17:57:10"}
+                        ],
+                        "2024-11-05": [
+                            {"time": "02:10:15", "color": "White", "id": "2024-11-05-02:10:15-1160 4980", "timestamp": "2024-11-05 02:10:15"}
+                        ]
                     },
-                    "2025-05-01 09:22:05": {
-                        "ABP": self._generate_base64_waveform(),
-                        "Lead-II": self._generate_base64_waveform(),
-                        "Resp": self._generate_base64_waveform(),
-                        "Pleth": self._generate_base64_waveform()
-                    },
-                    "2025-05-01 14:08:45": {
-                        "ABP": self._generate_base64_waveform(),
-                        "Lead-II": self._generate_base64_waveform(),
-                        "Resp": self._generate_base64_waveform(),
-                        "Pleth": self._generate_base64_waveform()
-                    },
-                    "2025-05-01 19:35:22": {
-                        "ABP": self._generate_base64_waveform(),
-                        "Lead-II": self._generate_base64_waveform(),
-                        "Resp": self._generate_base64_waveform(),
-                        "Pleth": self._generate_base64_waveform()
-                    },
-                    "2025-05-02 01:30:20": {
-                        "ABP": self._generate_base64_waveform(),
-                        "Lead-II": self._generate_base64_waveform(),
-                        "Resp": self._generate_base64_waveform(),
-                        "Pleth": self._generate_base64_waveform()
-                    },
-                    "2025-05-02 07:12:43": {
-                        "ABP": self._generate_base64_waveform(),
-                        "Lead-II": self._generate_base64_waveform(),
-                        "Resp": self._generate_base64_waveform(),
-                        "Pleth": self._generate_base64_waveform()
-                    },
-                    "2025-05-02 12:29:24": {
-                        "ABP": self._generate_base64_waveform(),
-                        "Lead-II": self._generate_base64_waveform(),
-                        "Resp": self._generate_base64_waveform(),
-                        "Pleth": self._generate_base64_waveform()
-                    },
-                    "2025-05-02 18:57:10": {
-                        "ABP": self._generate_base64_waveform(),
-                        "Lead-II": self._generate_base64_waveform(),
-                        "Resp": self._generate_base64_waveform(),
-                        "Pleth": self._generate_base64_waveform()
-                    },
-                    "2025-05-03 04:10:15": {
-                        "ABP": self._generate_base64_waveform(),
-                        "Lead-II": self._generate_base64_waveform(),
-                        "Resp": self._generate_base64_waveform(),
-                        "Pleth": self._generate_base64_waveform()
-                    },
-                    "2025-05-03 10:25:33": {
-                        "ABP": self._generate_base64_waveform(),
-                        "Lead-II": self._generate_base64_waveform(),
-                        "Resp": self._generate_base64_waveform(),
-                        "Pleth": self._generate_base64_waveform()
-                    },
-                    "2025-05-03 16:45:18": {
-                        "ABP": self._generate_base64_waveform(),
-                        "Lead-II": self._generate_base64_waveform(),
-                        "Resp": self._generate_base64_waveform(),
-                        "Pleth": self._generate_base64_waveform()
-                    },
-                    "2025-05-03 22:05:49": {
-                        "ABP": self._generate_base64_waveform(),
-                        "Lead-II": self._generate_base64_waveform(),
-                        "Resp": self._generate_base64_waveform(),
-                        "Pleth": self._generate_base64_waveform()
+                    "admission3": {
+                        "2025-05-01": [
+                            {"time": "02:15:30", "color": "Red", "id": "2025-05-01-02:15:30-1160 4980", "timestamp": "2025-05-01 02:15:30"},
+                            {"time": "05:45:12", "color": "Yellow", "id": "2025-05-01-05:45:12-1160 4980", "timestamp": "2025-05-01 05:45:12"},
+                            {"time": "09:22:05", "color": "SilentCyan", "id": "2025-05-01-09:22:05-1160 4980", "timestamp": "2025-05-01 09:22:05"},
+                            {"time": "14:08:45", "color": "White", "id": "2025-05-01-14:08:45-1160 4980", "timestamp": "2025-05-01 14:08:45"},
+                            {"time": "19:35:22", "color": "Red", "id": "2025-05-01-19:35:22-1160 4980", "timestamp": "2025-05-01 19:35:22"}
+                        ],
+                        "2025-05-02": [
+                            {"time": "01:30:20", "color": "Cyan", "id": "2025-05-02-01:30:20-1160 4980", "timestamp": "2025-05-02 01:30:20"},
+                            {"time": "07:12:43", "color": "ShortYellow", "id": "2025-05-02-07:12:43-1160 4980", "timestamp": "2025-05-02 07:12:43"},
+                            {"time": "12:29:24", "color": "Red", "id": "2025-05-02-12:29:24-1160 4980", "timestamp": "2025-05-02 12:29:24"},
+                            {"time": "18:57:10", "color": "Yellow", "id": "2025-05-02-18:57:10-1160 4980", "timestamp": "2025-05-02 18:57:10"}
+                        ],
+                        "2025-05-03": [
+                            {"time": "04:10:15", "color": "White", "id": "2025-05-03-04:10:15-1160 4980", "timestamp": "2025-05-03 04:10:15"},
+                            {"time": "10:25:33", "color": "Red", "id": "2025-05-03-10:25:33-1160 4980", "timestamp": "2025-05-03 10:25:33"},
+                            {"time": "16:45:18", "color": "SilentCyan", "id": "2025-05-03-16:45:18-1160 4980", "timestamp": "2025-05-03 16:45:18"},
+                            {"time": "22:05:49", "color": "Yellow", "id": "2025-05-03-22:05:49-1160 4980", "timestamp": "2025-05-03 22:05:49"}
+                        ]
                     }
                 },
-
                 # 직접 정의된 간호기록 데이터 (단일 객체, 배열 아님)
                 "nursing_records": {
                     "2025-05-01 01:55:22": {
@@ -366,12 +313,92 @@ class PatientData:
                         "시행일시": "2025-05-03 21:45:20"
                     }
                 },
+                # Base64로 인코딩된 파형 데이터
+                "waveforms": {
+                    "2025-05-01 02:15:30": {
+                        "ABP": self._generate_base64_waveform(),
+                        "Lead-II": self._generate_base64_waveform(),
+                        "Resp": self._generate_base64_waveform(),
+                        "Pleth": self._generate_base64_waveform()
+                    },
+                    "2025-05-01 05:45:12": {
+                        "ABP": self._generate_base64_waveform(),
+                        "Lead-II": self._generate_base64_waveform(),
+                        "Resp": self._generate_base64_waveform(),
+                        "Pleth": self._generate_base64_waveform()
+                    },
+                    "2025-05-01 09:22:05": {
+                        "ABP": self._generate_base64_waveform(),
+                        "Lead-II": self._generate_base64_waveform(),
+                        "Resp": self._generate_base64_waveform(),
+                        "Pleth": self._generate_base64_waveform()
+                    },
+                    "2025-05-01 14:08:45": {
+                        "ABP": self._generate_base64_waveform(),
+                        "Lead-II": self._generate_base64_waveform(),
+                        "Resp": self._generate_base64_waveform(),
+                        "Pleth": self._generate_base64_waveform()
+                    },
+                    "2025-05-01 19:35:22": {
+                        "ABP": self._generate_base64_waveform(),
+                        "Lead-II": self._generate_base64_waveform(),
+                        "Resp": self._generate_base64_waveform(),
+                        "Pleth": self._generate_base64_waveform()
+                    },
+                    "2025-05-02 01:30:20": {
+                        "ABP": self._generate_base64_waveform(),
+                        "Lead-II": self._generate_base64_waveform(),
+                        "Resp": self._generate_base64_waveform(),
+                        "Pleth": self._generate_base64_waveform()
+                    },
+                    "2025-05-02 07:12:43": {
+                        "ABP": self._generate_base64_waveform(),
+                        "Lead-II": self._generate_base64_waveform(),
+                        "Resp": self._generate_base64_waveform(),
+                        "Pleth": self._generate_base64_waveform()
+                    },
+                    "2025-05-02 12:29:24": {
+                        "ABP": self._generate_base64_waveform(),
+                        "Lead-II": self._generate_base64_waveform(),
+                        "Resp": self._generate_base64_waveform(),
+                        "Pleth": self._generate_base64_waveform()
+                    },
+                    "2025-05-02 18:57:10": {
+                        "ABP": self._generate_base64_waveform(),
+                        "Lead-II": self._generate_base64_waveform(),
+                        "Resp": self._generate_base64_waveform(),
+                        "Pleth": self._generate_base64_waveform()
+                    },
+                    "2025-05-03 04:10:15": {
+                        "ABP": self._generate_base64_waveform(),
+                        "Lead-II": self._generate_base64_waveform(),
+                        "Resp": self._generate_base64_waveform(),
+                        "Pleth": self._generate_base64_waveform()
+                    },
+                    "2025-05-03 10:25:33": {
+                        "ABP": self._generate_base64_waveform(),
+                        "Lead-II": self._generate_base64_waveform(),
+                        "Resp": self._generate_base64_waveform(),
+                        "Pleth": self._generate_base64_waveform()
+                    },
+                    "2025-05-03 16:45:18": {
+                        "ABP": self._generate_base64_waveform(),
+                        "Lead-II": self._generate_base64_waveform(),
+                        "Resp": self._generate_base64_waveform(),
+                        "Pleth": self._generate_base64_waveform()
+                    },
+                    "2025-05-03 22:05:49": {
+                        "ABP": self._generate_base64_waveform(),
+                        "Lead-II": self._generate_base64_waveform(),
+                        "Resp": self._generate_base64_waveform(),
+                        "Pleth": self._generate_base64_waveform()
+                    }
+                }
             }
         }
     
     def _generate_base64_waveform(self):
         # 예시로 랜덤 파형 데이터 생성 후 base64로 인코딩
-        # 실제 환경에서는 미리 인코딩된 문자열을 사용할 것
         sample_count = 200
         t = np.linspace(0, 4*np.pi, sample_count)
         amplitude = random.uniform(0.5, 2.0)
@@ -392,17 +419,31 @@ class PatientData:
     def get_patient_info(self, patient_id):
         return self.patients.get(patient_id)
     
-    def get_available_dates(self, patient_id):
+    def get_admission_periods(self, patient_id):
         if patient_id not in self.patients:
             return []
         
-        return sorted(list(self.patients[patient_id]["alarms"].keys()))
+        return self.patients[patient_id].get("admission_periods", [])
     
-    def get_alarms_for_date(self, patient_id, date_str):
+    def get_available_dates(self, patient_id, admission_id):
         if patient_id not in self.patients:
             return []
         
-        return self.patients[patient_id]["alarms"].get(date_str, [])
+        alarms = self.patients[patient_id].get("alarms", {})
+        if admission_id not in alarms:
+            return []
+        
+        return sorted(list(alarms[admission_id].keys()))
+    
+    def get_alarms_for_date(self, patient_id, admission_id, date_str):
+        if patient_id not in self.patients:
+            return []
+        
+        alarms = self.patients[patient_id].get("alarms", {})
+        if admission_id not in alarms:
+            return []
+        
+        return alarms[admission_id].get(date_str, [])
     
     def get_waveform_data(self, patient_id, timestamp):
         if patient_id not in self.patients:

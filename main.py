@@ -30,6 +30,7 @@ SAVE_BUTTON_WIDTH = 60
 COMMENT_HEIGHT = 30
 BUTTON_SPACING = 2
 DATE_PICKER_WIDTH = 150
+ADMISSION_PICKER_WIDTH = 220
 
 class TimelineWidget(QWidget):
     alarmSelected = Signal(dict)
@@ -208,6 +209,8 @@ class SICUMonitoring(QMainWindow):
         self.has_selected_date = False
         self.has_selected_alarm = False
         self.current_patient_id = ""
+        self.current_admission_id = ""
+        self.admission_periods = []  # 입원 기간 데이터를 저장
         self.initUI()
         self.connectSignals()
         
@@ -250,18 +253,8 @@ class SICUMonitoring(QMainWindow):
         self.search_button.setFixedWidth(SEARCH_BUTTON_WIDTH)
         patient_layout.addWidget(self.search_button, 0, 2)
         
-        empty_widget = QWidget()
-        patient_layout.addWidget(empty_widget, 0, 3)
-        patient_layout.setColumnMinimumWidth(3, 30)
-        
-        date_label = QLabel("입원 기간:")
-        date_label.setFixedWidth(ID_LABEL_WIDTH + 10)
-        patient_layout.addWidget(date_label, 0, 4)
-        
-        self.date_label = QLabel("24/04/01 — 25/08/09")
-        patient_layout.addWidget(self.date_label, 0, 5)
-        
-        patient_layout.setColumnStretch(6, 1)
+        # 빈 공간 설정
+        patient_layout.setColumnStretch(3, 1)
         
         return patient_container
         
@@ -272,15 +265,25 @@ class SICUMonitoring(QMainWindow):
         info_layout = QHBoxLayout(info_section)
         info_layout.setContentsMargins(5, 0, 5, 0)
         
+        # 입원 기간 선택 콤보박스 추가
+        admission_label = QLabel("입원 기간:")
+        info_layout.addWidget(admission_label)
+        
+        self.admission_combo = QComboBox()
+        self.admission_combo.setFixedWidth(ADMISSION_PICKER_WIDTH)
+        self.admission_combo.setEnabled(False)  # 초기에는 비활성화
+        info_layout.addWidget(self.admission_combo)
+        
+        # 날짜 선택 콤보박스
         date_label = QLabel("날짜:")
         info_layout.addWidget(date_label)
         
         self.date_combo = QComboBox()
         self.date_combo.setFixedWidth(DATE_PICKER_WIDTH)
-        self.date_combo.setEnabled(False)
+        self.date_combo.setEnabled(False)  # 초기에는 비활성화
         info_layout.addWidget(self.date_combo)
         
-        self.alarm_info_label = QLabel("환자 정보를 불러오고 날짜를 선택해주세요")
+        self.alarm_info_label = QLabel("환자 정보를 불러오고 입원 기간과 날짜를 선택해주세요")
         self.alarm_info_label.setStyleSheet("color: #888888; font-size: 14px;")
         
         info_layout.addWidget(self.alarm_info_label)
@@ -376,7 +379,7 @@ class SICUMonitoring(QMainWindow):
         content_layout = QVBoxLayout(content_container)
         content_layout.setContentsMargins(0, 0, 0, 0)
         
-        self.waveform_info_label = QLabel("날짜와 알람을 선택하세요")
+        self.waveform_info_label = QLabel("입원 기간, 날짜, 알람을 모두 선택하세요")
         self.waveform_info_label.setAlignment(Qt.AlignCenter)
         self.waveform_info_label.setStyleSheet("color: #888888; font-size: 14px;")
         
@@ -424,7 +427,7 @@ class SICUMonitoring(QMainWindow):
         content_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.addWidget(content_container, 1)
         
-        self.record_info_label = QLabel("날짜와 알람을 선택하세요")
+        self.record_info_label = QLabel("입원 기간, 날짜, 알람을 모두 선택하세요")
         self.record_info_label.setAlignment(Qt.AlignCenter)
         self.record_info_label.setStyleSheet("color: #888888; font-size: 14px;")
         content_layout.addWidget(self.record_info_label)
@@ -536,9 +539,51 @@ class SICUMonitoring(QMainWindow):
     def connectSignals(self):
         self.search_button.clicked.connect(self.search_patient)
         self.submit_button.clicked.connect(self.save_comment)
+        self.admission_combo.currentIndexChanged.connect(self.admission_selected)
         self.date_combo.currentTextChanged.connect(self.date_selected)
         self.true_button.clicked.connect(lambda: self.set_isalarm(True))
         self.false_button.clicked.connect(lambda: self.set_isalarm(False))
+    
+    def admission_selected(self, index):
+        if index < 0:  # 선택된 항목이 없을 경우
+            return
+        
+        # 선택된 입원 기간 ID 가져오기
+        self.current_admission_id = self.admission_combo.itemData(index)
+        admission_text = self.admission_combo.currentText()
+        
+        print(f"입원 기간 선택: {admission_text} (ID: {self.current_admission_id})")
+        
+        # 선택된 입원 기간의 날짜들 가져오기
+        available_dates = patient_data.get_available_dates(self.current_patient_id, self.current_admission_id)
+        
+        # 날짜 콤보박스 초기화
+        self.date_combo.clear()
+        
+        if available_dates:
+            # 날짜 콤보박스에 날짜 추가 (아무것도 선택되지 않은 상태)
+            self.date_combo.addItems(available_dates)
+            self.date_combo.setCurrentIndex(-1)  # 선택 항목 없음
+            
+            # 날짜 콤보박스 활성화
+            self.date_combo.setEnabled(True)
+            
+            # 알람 정보 초기화
+            self.alarm_info_label.setText("날짜를 선택해주세요")
+        else:
+            # 사용 가능한 날짜가 없는 경우
+            self.date_combo.setEnabled(False)
+            self.alarm_info_label.setText("선택된 입원 기간에 알람 데이터가 없습니다")
+        
+        # 날짜 선택 상태 초기화
+        self.has_selected_date = False
+        self.has_selected_alarm = False
+        
+        # 타임라인 초기화
+        self.timeline_widget.set_alarms([])
+        
+        # 컨텐츠 표시 업데이트
+        self.update_content_visibility()
     
     def date_selected(self, date_str):
         if not date_str:
@@ -559,7 +604,7 @@ class SICUMonitoring(QMainWindow):
         print(f"날짜 {date_str}의 알람 데이터 로드")
         
         # 데이터 구조에서 알람 정보 가져오기
-        alarms = patient_data.get_alarms_for_date(self.current_patient_id, date_str)
+        alarms = patient_data.get_alarms_for_date(self.current_patient_id, self.current_admission_id, date_str)
         
         # 타임라인 위젯에 알람 데이터 설정
         self.timeline_widget.set_alarms(alarms)
@@ -690,36 +735,56 @@ class SICUMonitoring(QMainWindow):
         patient_info = patient_data.get_patient_info(patient_id)
         
         if patient_info:
-            # 입원 기간 표시
-            self.date_label.setText(patient_info["admission_period"])
+            # 모든 콤보박스 및 안내 텍스트 초기화
+            self.clear_ui_selections()
             
-            # 날짜 콤보박스 초기화
-            self.date_combo.clear()
+            # 입원 기간 콤보박스 초기화
+            self.admission_combo.clear()
             
-            # 날짜 콤보박스에 타임스탬프에서 추출한 연월일 추가
-            available_dates = patient_data.get_available_dates(patient_id)
-            self.date_combo.addItems(available_dates)
+            # 입원 기간 가져오기
+            admission_periods = patient_data.get_admission_periods(patient_id)
             
-            # 날짜 콤보박스 활성화
-            self.date_combo.setEnabled(True)
+            # 입원 기간 콤보박스에 항목 추가 (아무것도 선택되지 않은 상태)
+            for period in admission_periods:
+                period_text = f"{period['start']} ~ {period['end']}"
+                self.admission_combo.addItem(period_text, period['id'])
             
-            # 알람 정보 초기화
-            self.alarm_info_label.setText("날짜를 선택해주세요")
+            # 아무 항목도 선택되지 않은 상태로 설정
+            self.admission_combo.setCurrentIndex(-1)
+            
+            # 입원 기간 콤보박스 활성화
+            self.admission_combo.setEnabled(True)
+            
+            # 알람 정보 텍스트 업데이트
+            self.alarm_info_label.setText("입원 기간을 선택해주세요")
             self.alarm_info_label.setStyleSheet("color: #888888; font-size: 14px;")
             
-            # 선택 상태 플래그 초기화
-            self.has_selected_date = False
-            self.has_selected_alarm = False
-            
-            # 타임라인 초기화
-            self.timeline_widget.set_alarms([])
-        else:
-            # 환자 정보가 없는 경우
-            self.date_label.setText("")
+            # 날짜 콤보박스 비활성화 (입원 기간 선택 전)
             self.date_combo.clear()
             self.date_combo.setEnabled(False)
+        else:
+            # 환자 정보가 없는 경우
+            self.clear_ui_selections()
             self.alarm_info_label.setText("환자 정보를 찾을 수 없습니다")
-            
+    
+    def clear_ui_selections(self):
+        """UI 선택 항목 및 상태 초기화"""
+        # 입원 기간 콤보박스 비활성화 및 초기화
+        self.admission_combo.clear()
+        self.admission_combo.setEnabled(False)
+        
+        # 날짜 콤보박스 비활성화 및 초기화
+        self.date_combo.clear()
+        self.date_combo.setEnabled(False)
+        
+        # 선택 상태 플래그 초기화
+        self.has_selected_date = False
+        self.has_selected_alarm = False
+        self.current_admission_id = ""
+        
+        # 타임라인 초기화
+        self.timeline_widget.set_alarms([])
+        
         # 콘텐츠 표시 업데이트
         self.update_content_visibility()
     
