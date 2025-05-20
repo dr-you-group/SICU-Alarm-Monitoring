@@ -252,6 +252,9 @@ class SICUMonitoring(QMainWindow):
         # 초기 날짜 버튼 텍스트 설정 ("날짜 선택" 표시)
         self.date_button.setText("날짜 선택")
         
+        # 날짜 선택 버튼 비활성화 - 환자 정보 불러오기 후 활성화
+        self.date_button.setEnabled(False)
+        
     def createPatientInfoSection(self):
         # 환자 정보 섹션 - 고정 높이 컨테이너
         patient_container = QWidget()
@@ -410,7 +413,7 @@ class SICUMonitoring(QMainWindow):
         header_widget = QWidget()
         header_widget.setFixedHeight(HEADER_HEIGHT)
         header_layout = QHBoxLayout(header_widget)
-        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setContentsMargins(5, 0, 5, 0)
         
         waveform_label = QLabel("Waveform Signal")
         waveform_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
@@ -421,19 +424,27 @@ class SICUMonitoring(QMainWindow):
         header_line.setFrameShape(QFrame.HLine)
         header_line.setFrameShadow(QFrame.Sunken)
         
-        # 파형 위젯 추가
-        self.waveform_widget = WaveformWidget()
+        # 콘텐츠 컨테이너 - 해당 영역에 안내 메시지와 파형 위젯 추가
+        content_container = QWidget()
+        content_layout = QVBoxLayout(content_container)
+        content_layout.setContentsMargins(0, 0, 0, 0)
         
         # 날짜와 알람이 선택되지 않았을 때 표시할 안내 레이블
         self.waveform_info_label = QLabel("날짜와 알람을 선택하세요")
         self.waveform_info_label.setAlignment(Qt.AlignCenter)
         self.waveform_info_label.setStyleSheet("color: #888888; font-size: 14px;")
         
-        # 레이아웃에 헤더, 구분선, 파형 위젯 추가
+        # 파형 위젯 추가
+        self.waveform_widget = WaveformWidget()
+        
+        # 레이아웃에 헤더, 구분선, 콘텐츠 컨테이너 추가
         left_layout.addWidget(header_widget)
         left_layout.addWidget(header_line)
-        left_layout.addWidget(self.waveform_info_label)
-        left_layout.addWidget(self.waveform_widget)
+        left_layout.addWidget(content_container, 1)  # 늘어나는 공간 확보
+        
+        # 콘텐츠 레이아웃에 안내 레이블과 파형 위젯 추가
+        content_layout.addWidget(self.waveform_info_label)
+        content_layout.addWidget(self.waveform_widget)
         
         # 초기에는 시그널 화면을 숨김
         self.waveform_widget.setVisible(False)
@@ -448,72 +459,56 @@ class SICUMonitoring(QMainWindow):
         right_frame.setLineWidth(1)
         right_layout = QVBoxLayout(right_frame)
         right_layout.setContentsMargins(5, 5, 5, 5)
+        right_layout.setSpacing(0)  # 컴포넌트 간 간격 제거 - 좌측과 동일하게 설정
         
-        # 간호기록 헤더
-        header_layout = QHBoxLayout()
-        header_layout.addWidget(QLabel("Nursing Record"))
+        # 간호기록 헤더 (항상 표시)
+        header_widget = QWidget()
+        header_widget.setFixedHeight(HEADER_HEIGHT)
+        header_layout = QHBoxLayout(header_widget)
+        header_layout.setContentsMargins(5, 0, 5, 0)
         
+        nursing_label = QLabel("Nursing Record")
+        nursing_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        header_layout.addWidget(nursing_label)
         header_layout.addStretch()
         
-        prev_button = QPushButton("◀")
-        prev_button.setFixedSize(30, 25)
-        header_layout.addWidget(prev_button)
+        # 레이아웃에 헤더 추가
+        right_layout.addWidget(header_widget)
         
-        next_button = QPushButton("▶")
-        next_button.setFixedSize(30, 25)
-        header_layout.addWidget(next_button)
+        # 구분선 - 좌측과 동일한 스타일로 설정
+        header_line = QFrame()
+        header_line.setFrameShape(QFrame.HLine)
+        header_line.setFrameShadow(QFrame.Sunken)
+        right_layout.addWidget(header_line)
         
-        right_layout.addLayout(header_layout)
+        # 콘텐츠 컨테이너 - 해당 영역에 안내 메시지와 스크롤 영역 추가
+        content_container = QWidget()
+        content_layout = QVBoxLayout(content_container)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.addWidget(content_container, 1)  # 늘어나는 공간 확보
         
         # 날짜와 알람이 선택되지 않았을 때 표시할 안내 레이블
         self.record_info_label = QLabel("날짜와 알람을 선택하세요")
         self.record_info_label.setAlignment(Qt.AlignCenter)
         self.record_info_label.setStyleSheet("color: #888888; font-size: 14px;")
-        right_layout.addWidget(self.record_info_label)
+        content_layout.addWidget(self.record_info_label)
         
-        # 간호기록 테이블
-        self.record_table = QTableWidget(26, 2)
-        self.record_table.setHorizontalHeaderLabels(["항목", "내용"])
-        self.record_table.setStyleSheet("QTableWidget::item { border-bottom: 1px solid #444; }")
+        # 스크롤 영역 생성
+        self.records_scroll_area = QScrollArea()
+        self.records_scroll_area.setWidgetResizable(True)
+        self.records_scroll_area.setFrameShape(QFrame.NoFrame)
         
-        items = {
-            "간호중재(코드명)": "",
-            "간호활동(코드명)": "",
-            "간호속성코드(코드명)": "",
-            "속성": "",
-            "Duty(코드명)": "",
-            "시행일시": "",
-        }
+        # 스크롤 영역에 들어갈 컨테이너 위젯
+        self.records_container = QWidget()
+        self.records_layout = QVBoxLayout(self.records_container)
+        self.records_layout.setSpacing(10)
+        self.records_layout.setAlignment(Qt.AlignTop)
         
-        for i, (k, v) in enumerate(items.items()):
-            print('nursing record: ', k, v)
-            item_widget = QTableWidgetItem(k)
-            self.record_table.setItem(i, 0, item_widget)
-            content_widget = QTableWidgetItem(v)
-            self.record_table.setItem(i, 1, content_widget)
-            
-            # 읽기 전용으로 설정
-            item_widget.setFlags(item_widget.flags() & ~Qt.ItemIsEditable)
-            content_widget.setFlags(content_widget.flags() & ~Qt.ItemIsEditable)
-            
+        self.records_scroll_area.setWidget(self.records_container)
+        content_layout.addWidget(self.records_scroll_area)
         
-        # 첫 번째 열은 고정 너비, 두 번째 열은 늘어남
-        self.record_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
-        self.record_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-        self.record_table.setColumnWidth(0, 150)  # "항목" 열 고정 너비
-        
-        self.record_table.verticalHeader().setVisible(False)
-        self.record_table.setAlternatingRowColors(True)
-        self.record_table.setStyleSheet("alternate-background-color: #2A2A2A;")
-        
-        right_layout.addWidget(self.record_table)
-        
-        # 초기에는 테이블 숨김
-        self.record_table.setVisible(False)
-        
-        # 이전/다음 버튼 변수 저장
-        self.prev_button = prev_button
-        self.next_button = next_button
+        # 초기에는 스크롤 영역 숨김
+        self.records_scroll_area.setVisible(False)
         
         return right_frame
     
@@ -623,8 +618,6 @@ class SICUMonitoring(QMainWindow):
         self.submit_button.clicked.connect(self.save_comment)
         self.date_button.clicked.connect(self.show_calendar)
         self.calendar.clicked.connect(self.date_selected)
-        self.prev_button.clicked.connect(self.prev_record)
-        self.next_button.clicked.connect(self.next_record)
         self.true_button.clicked.connect(lambda: self.set_isalarm(True))
         self.false_button.clicked.connect(lambda: self.set_isalarm(False))
     
@@ -703,14 +696,14 @@ class SICUMonitoring(QMainWindow):
             self.waveform_widget.setVisible(True)
             
             self.record_info_label.setVisible(False)
-            self.record_table.setVisible(True)
+            self.records_scroll_area.setVisible(True)
         else:
             # 날짜나 알람이 선택되지 않은 경우, 안내 메시지 표시
             self.waveform_info_label.setVisible(True)
             self.waveform_widget.setVisible(False)
             
             self.record_info_label.setVisible(True)
-            self.record_table.setVisible(False)
+            self.records_scroll_area.setVisible(False)
     
     def load_waveform_data(self):
         # 선택된 알람에 따라 파형 데이터 로드 (예시 용도)
@@ -718,9 +711,130 @@ class SICUMonitoring(QMainWindow):
         # 실제 구현에서는 알람과 연관된 파형 데이터 로드
     
     def load_nursing_record(self):
-        # 선택된 알람에 따라 간호기록 로드 (예시 용도)
+        # 선택된 알람에 따라 간호기록 로드
         print(f"간호기록 로드: {self.selected_alarm_color}")
-        # 실제 구현에서는 알람과 연관된 간호기록 로드
+        
+        # 기존 간호기록 지우기
+        self.clear_nursing_records()
+        
+        # 여기서 실제로는 파일에서 간호기록을 로드해야 함
+        # 예시 데이터 (실제로는 nursing_record_11604780.xlsx 파일에서 가져와야 함)
+        # 선택된 알람 시간 기준 ±30분 범위의 간호기록 가져오기
+        
+        # 현재는 예시 데이터로 대체
+        records = [
+            {
+                "간호중재(코드명)": "약물 투여(A24.3)",
+                "간호활동(코드명)": "정맥주사(B62.1)",
+                "간호속성코드(코드명)": "수행(C12)",
+                "속성": "정규",
+                "Duty(코드명)": "Day(D1)",
+                "시행일시": "2024-08-05 20:05:12"
+            },
+            {
+                "간호중재(코드명)": "환자 상태 확인(A12.5)",
+                "간호활동(코드명)": "활력징후 측정(B15.7)",
+                "간호속성코드(코드명)": "수행(C12)",
+                "속성": "정규",
+                "Duty(코드명)": "Day(D1)",
+                "시행일시": "2024-08-05 20:10:30"
+            },
+            {
+                "간호중재(코드명)": "통증 관리(A18.2)",
+                "간호활동(코드명)": "통증 사정(B32.4)",
+                "간호속성코드(코드명)": "수행(C12)",
+                "속성": "PRN",
+                "Duty(코드명)": "Day(D1)",
+                "시행일시": "2024-08-05 20:15:45"
+            },
+            {
+                "간호중재(코드명)": "수액 관리(A15.6)",
+                "간호활동(코드명)": "수액 주입속도 조절(B25.8)",
+                "간호속성코드(코드명)": "수행(C12)",
+                "속성": "정규",
+                "Duty(코드명)": "Day(D1)",
+                "시행일시": "2024-08-05 20:22:10"
+            },
+            {
+                "간호중재(코드명)": "피부 관리(A33.7)",
+                "간호활동(코드명)": "드레싱 교환(B42.9)",
+                "간호속성코드(코드명)": "수행(C12)",
+                "속성": "정규",
+                "Duty(코드명)": "Day(D1)",
+                "시행일시": "2024-08-05 20:30:00"
+            }
+        ]
+        
+        # 간호기록 위젯 생성 및 추가
+        self.add_nursing_records(records)
+        
+        # 더 이상 필터링이 필요하지 않음
+    
+    def clear_nursing_records(self):
+        # 기존 간호기록 위젯 모두 제거
+        while self.records_layout.count():
+            item = self.records_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+    
+    def add_nursing_records(self, records):
+        # 간호기록 목록을 위젯으로 변환하여 레이아웃에 추가
+        for record in records:
+            record_widget = self.create_record_widget(record)
+            self.records_layout.addWidget(record_widget)
+    
+    def create_record_widget(self, record):
+        # 각 간호기록 항목을 위한 위젯 생성
+        record_frame = QFrame()
+        record_frame.setFrameShape(QFrame.StyledPanel)
+        record_frame.setStyleSheet("background-color: #2A2A2A; border-radius: 5px;")
+        
+        record_layout = QVBoxLayout(record_frame)
+        record_layout.setContentsMargins(10, 10, 10, 10)
+        
+        # 고정된 6개 항목을 순서대로 표시
+        fields = [
+            "간호중재(코드명)",
+            "간호활동(코드명)",
+            "간호속성코드(코드명)",
+            "속성",
+            "Duty(코드명)",
+            "시행일시"
+        ]
+        
+        # 시행일시를 먼저 표시 (헤더처럼)
+        time_label = QLabel(f"시행일시: {record['시행일시']}")
+        time_label.setStyleSheet("font-weight: bold; color: #CCCCCC;")
+        record_layout.addWidget(time_label)
+        
+        # 구분선
+        separator = QFrame()
+        separator.setFrameShape(QFrame.HLine)
+        separator.setStyleSheet("background-color: #444444;")
+        record_layout.addWidget(separator)
+        
+        # 나머지 5개 항목 표시
+        for field in fields:
+            if field != '시행일시':  # 시행일시는 이미 표시했으므로 제외
+                item_layout = QHBoxLayout()
+                item_layout.setContentsMargins(0, 5, 0, 5)
+                
+                key_label = QLabel(f"{field}:")
+                key_label.setFixedWidth(150)
+                key_label.setStyleSheet("color: #AAAAAA;")
+                
+                value_label = QLabel(record.get(field, ""))
+                value_label.setWordWrap(True)
+                value_label.setStyleSheet("color: white;")
+                
+                item_layout.addWidget(key_label)
+                item_layout.addWidget(value_label, 1)
+                
+                record_layout.addLayout(item_layout)
+        
+        return record_frame
+    
+    # 필터링 기능 삭제 - 모든 항목 고정 표시
     
     def search_patient(self):
         # 환자 ID로 데이터 검색
@@ -731,8 +845,9 @@ class SICUMonitoring(QMainWindow):
         # 예시: 데이터에서 선택된 알람 정보 가져오기
         # 실제 구현에서는 DB 또는 파일에서 데이터 로드
         
-        # 새로운 환자 로드 시 날짜 선택 버튼 초기화
-        self.date_button.setText("날짜 선택")  # "날짜 선택"으로 다시 변경
+        # 새로운 환자 로드 시 날짜 선택 버튼 활성화
+        self.date_button.setEnabled(True)
+        self.date_button.setText("날짜 선택")
         
         # 타임라인 초기화 (비운 알람 리스트로 설정)
         self.timeline_widget.set_alarms([])
@@ -787,15 +902,7 @@ class SICUMonitoring(QMainWindow):
             
         print(f"isAlarm 설정: {status_text}")
     
-    def prev_record(self):
-        # 이전 기록으로 이동
-        print("이전 기록")
-        # 이전 기록 탐색 로직 구현
-    
-    def next_record(self):
-        # 다음 기록으로 이동
-        print("다음 기록")
-        # 다음 기록 탐색 로직 구현
+    # 이전/다음 기록 이동 대신 스크롤로 대체
 
 
 if __name__ == "__main__":
