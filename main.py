@@ -1,5 +1,6 @@
 import sys
 import os
+import csv
 from datetime import datetime, timedelta
 from math import sin
 import numpy as np
@@ -160,7 +161,7 @@ class WaveformWidget(QWidget):
             path = QPainterPath()
             path.moveTo(50, y_base)
             
-            # 디코딩된 파형 데이터 있는 경우
+            # 디코딩된 파형 데이터가 있는 경우에만 그리기
             if signal in self.decoded_waveforms and len(self.decoded_waveforms[signal]) > 0:
                 waveform = self.decoded_waveforms[signal]
                 points_to_draw = min(len(waveform), width - 60)
@@ -186,16 +187,13 @@ class WaveformWidget(QWidget):
                             path.moveTo(x, y)
                         else:
                             path.lineTo(x, y)
+                    
+                    painter.drawPath(path)
             else:
-                # 디코딩된 데이터가 없는 경우 기본 사인파
-                amplitude = signal_height / 4
-                for x in range(50, width - 10, 10):
-                    freq = 0.02 + i * 0.005
-                    y = y_base + amplitude * sin(x * freq)
-                    path.lineTo(x, y)
+                # 데이터가 없으면 아무것도 그리지 않음 (기본 사인파 제거)
+                pass
             
-            painter.drawPath(path)
-            
+            # 구분선 그리기
             if i < len(self.signals) - 1:
                 painter.setPen(Qt.gray)
                 painter.drawLine(0, (i + 1) * signal_height, width, (i + 1) * signal_height)
@@ -210,7 +208,11 @@ class SICUMonitoring(QMainWindow):
         self.has_selected_alarm = False
         self.current_patient_id = ""
         self.current_admission_id = ""
+        self.current_alarm_id = ""  # 현재 선택된 알람 ID
         self.admission_periods = []  # 입원 기간 데이터를 저장
+        self.csv_file_path = "alarm_annotations.csv"  # CSV 파일 경로
+        self.annotation_data = {}  # 주석 데이터 캐시
+        self.load_annotations()  # 저장된 주석 데이터 로드
         self.initUI()
         self.connectSignals()
         
@@ -245,7 +247,7 @@ class SICUMonitoring(QMainWindow):
         patient_layout.addWidget(id_label, 0, 0)
         
         self.patient_id = QLineEdit()
-        # self.patient_id.setText("11604980")
+        self.patient_id.setText("11604980")  # 기본 환자 ID 설정
         self.patient_id.setFixedWidth(PATIENT_ID_WIDTH)
         patient_layout.addWidget(self.patient_id, 0, 1)
         
@@ -619,11 +621,34 @@ class SICUMonitoring(QMainWindow):
         
         print(f"알람 선택 이벤트: {color} ({time}), 타임스탬프: {timestamp}")
         
+        # 알람 ID 생성 (환자ID-날짜-시간 형태)
+        date_str = self.date_combo.currentText()
+        self.current_alarm_id = self.generate_alarm_id(self.current_patient_id, date_str, time)
+        
         # 선택된 알람 정보 업데이트
         self.update_selected_alarm(color, time, timestamp)
         
         # 알람 선택 플래그 설정
         self.has_selected_alarm = True
+        
+        # 저장된 주석 데이터 로드
+        annotation = self.get_annotation(self.current_alarm_id)
+        
+        # isAlarm 상태 업데이트
+        if annotation['isAlarm'] is not None:
+            status_text = "True" if annotation['isAlarm'] else "False"
+            self.isalarm_status_label.setText(status_text)
+            if annotation['isAlarm']:
+                self.isalarm_status_label.setStyleSheet("color: red;")
+            else:
+                self.isalarm_status_label.setStyleSheet("")
+        else:
+            # 저장된 데이터가 없으면 기본값으로 설정
+            self.isalarm_status_label.setText("None")
+            self.isalarm_status_label.setStyleSheet("")
+        
+        # 코멘트 업데이트
+        self.comment_text.setText(annotation['comment'])
         
         # 콘텐츠 표시 업데이트
         self.update_content_visibility()
@@ -631,6 +656,10 @@ class SICUMonitoring(QMainWindow):
         # 파형 데이터와 간호기록 로드
         self.load_waveform_data(timestamp)
         self.load_nursing_record(timestamp)
+        
+        print(f"알람 ID: {self.current_alarm_id}")
+        if annotation['isAlarm'] is not None:
+            print(f"저장된 isAlarm: {annotation['isAlarm']}, Comment: '{annotation['comment']}'")
     
     def update_content_visibility(self):
         if self.has_selected_date and self.has_selected_alarm:
@@ -781,6 +810,12 @@ class SICUMonitoring(QMainWindow):
         self.has_selected_date = False
         self.has_selected_alarm = False
         self.current_admission_id = ""
+        self.current_alarm_id = ""
+        
+        # 알람 관련 필드 초기화
+        self.isalarm_status_label.setText("None")
+        self.isalarm_status_label.setStyleSheet("")
+        self.comment_text.setText("")
         
         # 타임라인 초기화
         self.timeline_widget.set_alarms([])
@@ -809,7 +844,16 @@ class SICUMonitoring(QMainWindow):
     
     def save_comment(self):
         comment = self.comment_text.text()
-        print(f"코멘트 저장: {comment}")
+        is_alarm = self.isalarm_status_label.text() == "True"
+        
+        if self.current_alarm_id:
+            # 주석 데이터 저장
+            self.set_annotation(self.current_alarm_id, is_alarm, comment)
+            # CSV 파일에 저장
+            self.save_annotations()
+            print(f"주석 저장됨 - ID: {self.current_alarm_id}, isAlarm: {is_alarm}, Comment: {comment}")
+        else:
+            print("저장할 알람이 선택되지 않았습니다")
     
     def set_isalarm(self, status):
         status_text = "True" if status else "False"
@@ -821,6 +865,78 @@ class SICUMonitoring(QMainWindow):
             self.isalarm_status_label.setStyleSheet("")
             
         print(f"isAlarm 설정: {status_text}")
+        
+        # 즉시 저장
+        if self.current_alarm_id:
+            comment = self.comment_text.text()
+            # 주석 데이터 저장
+            self.set_annotation(self.current_alarm_id, status, comment)
+            # CSV 파일에 저장
+            self.save_annotations()
+            print(f"isAlarm 즉시 저장됨 - ID: {self.current_alarm_id}, isAlarm: {status}, Comment: {comment}")
+        else:
+            print("저장할 알람이 선택되지 않았습니다")
+    
+    # CSV 관련 메서드들
+    def generate_alarm_id(self, patient_id, date_str, time_str):
+        """알람 ID 생성: 환자ID-날짜-시간 형태"""
+        return f"{patient_id}-{date_str}-{time_str}"
+    
+    def load_annotations(self):
+        """CSV 파일에서 주석 데이터 로드"""
+        self.annotation_data = {}
+        
+        if not os.path.exists(self.csv_file_path):
+            # CSV 파일이 없으면 헤더만 생성
+            self.save_annotations()
+            return
+        
+        try:
+            with open(self.csv_file_path, 'r', encoding='utf-8', newline='') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    alarm_id = row['AlarmID']
+                    is_alarm = row['isAlarm'].lower() == 'true'
+                    comment = row['Comment']
+                    self.annotation_data[alarm_id] = {
+                        'isAlarm': is_alarm,
+                        'comment': comment
+                    }
+            print(f"주석 데이터 로드 완료: {len(self.annotation_data)}개")
+        except Exception as e:
+            print(f"주석 데이터 로드 오류: {e}")
+    
+    def save_annotations(self):
+        """주석 데이터를 CSV 파일에 저장"""
+        try:
+            with open(self.csv_file_path, 'w', encoding='utf-8', newline='') as f:
+                fieldnames = ['AlarmID', 'isAlarm', 'Comment']
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                
+                # 헤더 작성
+                writer.writeheader()
+                
+                # 데이터 작성
+                for alarm_id, data in self.annotation_data.items():
+                    writer.writerow({
+                        'AlarmID': alarm_id,
+                        'isAlarm': str(data['isAlarm']),
+                        'Comment': data['comment']
+                    })
+            print(f"주석 데이터 저장 완료: {self.csv_file_path}")
+        except Exception as e:
+            print(f"주석 데이터 저장 오류: {e}")
+    
+    def get_annotation(self, alarm_id):
+        """특정 알람 ID의 주석 데이터 가져오기"""
+        return self.annotation_data.get(alarm_id, {'isAlarm': None, 'comment': ''})
+    
+    def set_annotation(self, alarm_id, is_alarm, comment):
+        """특정 알람 ID의 주석 데이터 설정"""
+        self.annotation_data[alarm_id] = {
+            'isAlarm': is_alarm,
+            'comment': comment
+        }
 
 
 if __name__ == "__main__":
