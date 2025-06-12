@@ -161,14 +161,20 @@ class PatientDataJson:
             
             # 모든 간호기록 타임스탬프에 대해 시간 범위 내에 있는지 확인
             nursing_records = patient_data.get("nursing_records", {})
-            for record_time_str, record in nursing_records.items():
+            for record_time_str, records in nursing_records.items():
                 record_time = datetime.strptime(record_time_str, "%Y-%m-%d %H:%M:%S")
                 
                 if start_time <= record_time <= end_time:
-                    filtered_records.append(record)
+                    # 새로운 구조: 배열 형태 처리
+                    if isinstance(records, list):
+                        # 새로운 배열 구조
+                        filtered_records.extend(records)
+                    elif isinstance(records, dict):
+                        # 기존 단일 객체 구조 (하위 호환성)
+                        filtered_records.append(records)
             
             # 시행일시 기준으로 정렬
-            filtered_records.sort(key=lambda x: x["시행일시"])
+            filtered_records.sort(key=lambda x: x.get("시행일시", ""))
             
             return filtered_records
         except Exception as e:
@@ -221,7 +227,7 @@ class PatientDataJson:
         return True
     
     def add_nursing_record(self, patient_id: str, timestamp: str, record_data: Dict):
-        """새 간호기록 추가"""
+        """새 간호기록 추가 (배열 구조)"""
         patient_data = self._load_patient_data(patient_id)
         if not patient_data:
             return False
@@ -229,7 +235,18 @@ class PatientDataJson:
         if "nursing_records" not in patient_data:
             patient_data["nursing_records"] = {}
         
-        patient_data["nursing_records"][timestamp] = record_data
+        # 새로운 배열 구조: 같은 타임스탬프에 여러 기록 가능
+        if timestamp not in patient_data["nursing_records"]:
+            patient_data["nursing_records"][timestamp] = []
+        
+        # 기존 데이터가 dict라면 list로 변환 (마이그레이션)
+        existing_data = patient_data["nursing_records"][timestamp]
+        if isinstance(existing_data, dict):
+            patient_data["nursing_records"][timestamp] = [existing_data]
+        
+        # 새 기록 추가
+        patient_data["nursing_records"][timestamp].append(record_data)
+        
         self.save_patient_data(patient_id)
         return True
     
@@ -292,6 +309,61 @@ class PatientDataJson:
             print(f"파형 데이터 인코딩 오류: {e}")
             return ""
     
+    def migrate_nursing_records_to_array_format(self, patient_id: str = None) -> Dict[str, bool]:
+        """간호기록 데이터를 배열 형태로 마이그레이션
+        
+        Args:
+            patient_id: 특정 환자 ID. None이면 모든 환자 마이그레이션
+            
+        Returns:
+            각 환자의 마이그레이션 성공 여부
+        """
+        if patient_id:
+            patient_ids = [patient_id]
+        else:
+            patient_ids = self.get_all_patient_ids()
+        
+        results = {}
+        
+        for pid in patient_ids:
+            try:
+                patient_data = self._load_patient_data(pid)
+                if not patient_data:
+                    results[pid] = False
+                    continue
+                
+                nursing_records = patient_data.get("nursing_records", {})
+                migrated = False
+                
+                # 각 타임스탬프를 확인하여 dict 형태를 list로 변환
+                for timestamp, records in nursing_records.items():
+                    if isinstance(records, dict):
+                        # 기존 dict 구조를 list로 변환
+                        nursing_records[timestamp] = [records]
+                        migrated = True
+                        print(f"환자 {pid} - {timestamp}: dict → list 변환")
+                    elif isinstance(records, list):
+                        # 이미 변환된 상태
+                        pass
+                    else:
+                        print(f"환자 {pid} - {timestamp}: 예상치 못한 데이터 타입: {type(records)}")
+                
+                if migrated:
+                    # 변경된 데이터 저장
+                    success = self.save_patient_data(pid)
+                    results[pid] = success
+                    if success:
+                        print(f"환자 {pid} 간호기록 마이그레이션 완료")
+                else:
+                    results[pid] = True  # 마이그레이션이 필요 없음
+                    print(f"환자 {pid} 간호기록 마이그레이션 불필요 (이미 새 구조)")
+                    
+            except Exception as e:
+                print(f"환자 {pid} 마이그레이션 오류: {e}")
+                results[pid] = False
+        
+        return results
+    
     def get_data_summary(self) -> Dict[str, Any]:
         """데이터 요약 정보 반환"""
         patient_ids = self.get_all_patient_ids()
@@ -304,10 +376,19 @@ class PatientDataJson:
         for patient_id in patient_ids:
             patient_data = self._load_patient_data(patient_id)
             if patient_data:
+                # 간호기록 총 수 계산 (배열 구조 고려)
+                total_nursing_records = 0
+                nursing_records = patient_data.get("nursing_records", {})
+                for timestamp, records in nursing_records.items():
+                    if isinstance(records, list):
+                        total_nursing_records += len(records)
+                    elif isinstance(records, dict):
+                        total_nursing_records += 1
+                
                 patient_summary = {
                     "admission_periods": len(patient_data.get("admission_periods", [])),
                     "total_alarms": 0,
-                    "total_nursing_records": len(patient_data.get("nursing_records", {})),
+                    "total_nursing_records": total_nursing_records,
                     "total_waveforms": len(patient_data.get("waveforms", {}))
                 }
                 

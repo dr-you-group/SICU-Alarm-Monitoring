@@ -1,5 +1,6 @@
+data_processing/
+TestData/
 .DS_Store
-test.ipynb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
