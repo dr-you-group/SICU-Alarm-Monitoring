@@ -14,6 +14,9 @@ class TimelineWidget(QWidget):
         self.alarms = []
         self.selected_alarm_index = -1
         
+        # 키보드 포커스 활성화
+        self.setFocusPolicy(Qt.StrongFocus)
+        
     def set_alarms(self, alarms):
         self.alarms = alarms
         self.selected_alarm_index = -1
@@ -28,11 +31,19 @@ class TimelineWidget(QWidget):
         
         painter.fillRect(0, 0, width, height, QColor("#2A2A2A"))
         
+        # 포커스 상태일 때 테두리 표시
+        if self.hasFocus() and self.alarms:
+            painter.setPen(QPen(QColor("#0078D4"), 2))  # 파란색 테두리
+            painter.setBrush(Qt.NoBrush)
+            painter.drawRect(1, 1, width - 2, height - 2)
+        
+        # 24시간 눈금선 그리기
         painter.setPen(QPen(Qt.white, 1, Qt.DotLine))
         for i in range(1, 24):
             x = (width - 10) * (i / 24) + 5
             painter.drawLine(x, 0, x, height)
-            
+        
+        # 알람들 그리기
         for i, alarm in enumerate(self.alarms):
             time_parts = alarm["time"].split(":")
             hours = int(time_parts[0])
@@ -57,6 +68,12 @@ class TimelineWidget(QWidget):
                 painter.setPen(Qt.transparent)
                 painter.setBrush(QBrush(alarm_color))
                 painter.drawRect(x_pos - 4, 8, 8, height - 16)
+        
+        # 키보드 사용법 히노트 (알람이 있고 포커스가 있을 때)
+        if self.alarms and self.hasFocus():
+            painter.setPen(QPen(QColor("#888888"), 1))
+            hint_text = "← → 알람 이동"
+            painter.drawText(width - 80, height - 5, hint_text)
     
     def mousePressEvent(self, event):
         click_x = event.position().x()
@@ -81,12 +98,70 @@ class TimelineWidget(QWidget):
                 closest_distance = distance
         
         if closest_alarm != -1:
-            self.selected_alarm_index = closest_alarm
+            # 포커스 설정 (키보드 입력 가능)
+            self.setFocus()
+            # 새로운 메서드 사용으로 통일
+            self.select_alarm_by_index(closest_alarm)
+    
+    def keyPressEvent(self, event):
+        """키보드 이벤트 처리 (방향키로 알람 이동)"""
+        if not self.alarms:  # 알람이 없으면 무시
+            super().keyPressEvent(event)
+            return
+            
+        if event.key() == Qt.Key_Right:
+            # 다음 알람으로 이동
+            self.select_next_alarm()
+            event.accept()
+        elif event.key() == Qt.Key_Left:
+            # 이전 알람으로 이동
+            self.select_previous_alarm()
+            event.accept()
+        elif event.key() in [Qt.Key_Up, Qt.Key_Down]:
+            # 위/아래 화살표는 무시 (다른 컴포넌트로 포커스 이동)
+            super().keyPressEvent(event)
+        else:
+            super().keyPressEvent(event)
+    
+    def select_next_alarm(self):
+        """다음 알람 선택"""
+        if not self.alarms:
+            return
+            
+        if self.selected_alarm_index < len(self.alarms) - 1:
+            self.selected_alarm_index += 1
+        else:
+            # 마지막 알람에서 다음을 누르면 첫 번째로 순환
+            self.selected_alarm_index = 0
+            
+        self.update()
+        self.alarmSelected.emit(self.alarms[self.selected_alarm_index])
+        print(f"다음 알람 선택: {self.alarms[self.selected_alarm_index]['color']} ({self.alarms[self.selected_alarm_index]['time']})")
+    
+    def select_previous_alarm(self):
+        """이전 알람 선택"""
+        if not self.alarms:
+            return
+            
+        if self.selected_alarm_index > 0:
+            self.selected_alarm_index -= 1
+        else:
+            # 첫 번째 알람에서 이전을 누르면 마지막으로 순환
+            self.selected_alarm_index = len(self.alarms) - 1
+            
+        self.update()
+        self.alarmSelected.emit(self.alarms[self.selected_alarm_index])
+        print(f"이전 알람 선택: {self.alarms[self.selected_alarm_index]['color']} ({self.alarms[self.selected_alarm_index]['time']})")
+    
+    def select_alarm_by_index(self, index):
+        """인덱스로 알람 선택 (마우스 클릭 또는 외부 호출용)"""
+        if 0 <= index < len(self.alarms):
+            self.selected_alarm_index = index
             self.update()
-            
-            self.alarmSelected.emit(self.alarms[closest_alarm])
-            
-            print(f"알람 선택됨: {self.alarms[closest_alarm]['color']} ({self.alarms[closest_alarm]['time']})")
+            self.alarmSelected.emit(self.alarms[index])
+            print(f"알람 선택: {self.alarms[index]['color']} ({self.alarms[index]['time']})")
+            return True
+        return False
 
 
 class PatientDataManager:
@@ -206,8 +281,15 @@ class PatientDataManager:
         # 타임라인 위젯에 알람 데이터 설정
         self.timeline_widget.set_alarms(alarms)
         
-        # 날짜 선택 시 기본 알람 정보는 "None"으로 설정
-        self.update_selected_alarm("None", "")
+        # 알람이 있으면 첫 번째 알람 자동 선택 및 포커스 설정
+        if alarms:
+            # 타임라인 위젯에 포커스 설정 (키보드 입력 가능)
+            self.timeline_widget.setFocus()
+            # 첫 번째 알람 자동 선택
+            self.timeline_widget.select_alarm_by_index(0)
+        else:
+            # 알람이 없으면 기본 상태로 설정
+            self.update_selected_alarm("None", "")
     
     def update_selected_alarm(self, color, time_str, timestamp=None):
         self.selected_alarm_color = color

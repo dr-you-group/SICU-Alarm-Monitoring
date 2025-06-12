@@ -13,13 +13,13 @@ from typing import Dict, List, Optional, Any
 
 # 알람 색상 상수는 그대로 유지
 ALARM_COLORS = {
-    "White": "#FFFFFF",
-    "SilentCyan": "#00FFFF", 
-    "Cyan": "#00FFFF",
-    "ShortYellow": "#FFFF00",
-    "Yellow": "#FFFF00",
     "Red": "#FF0000",
-    "None": "#808080"
+    "Yellow": "#FFFF00",
+    "ShortYellow": "#FFFF00",
+    "SevereCyan": "#00FFFF",
+    "Cyan": "#00FFFF",
+    "SilentCyan": "#00FFFF",
+    "White": "#FFFFFF",
 }
 
 class PatientDataJson:
@@ -135,13 +135,42 @@ class PatientDataJson:
         return alarms[admission_id].get(date_str, [])
     
     def get_waveform_data(self, patient_id: str, timestamp: str) -> Optional[Dict]:
-        """특정 타임스탬프의 파형 데이터 반환"""
+        """특정 타임스탬프의 파형 데이터 반환 (배열 또는 base64 형태 모두 지원)"""
         patient_data = self._load_patient_data(patient_id)
         if not patient_data:
             return None
         
         waveforms = patient_data.get("waveforms", {})
-        return waveforms.get(timestamp)
+        raw_data = waveforms.get(timestamp)
+        
+        if not raw_data:
+            return None
+            
+        # 파형 데이터를 numpy 배열로 변환하여 반환
+        processed_data = {}
+        for signal_name, signal_data in raw_data.items():
+            if isinstance(signal_data, str):
+                # base64 문자열인 경우 디코딩
+                try:
+                    processed_data[signal_name] = self.decode_base64_waveform(signal_data)
+                except Exception as e:
+                    print(f"Base64 디코딩 실패 ({signal_name}): {e}")
+                    processed_data[signal_name] = np.array([])
+            elif isinstance(signal_data, list):
+                # 이미 배열 형태인 경우 numpy 배열로 변환
+                try:
+                    processed_data[signal_name] = np.array(signal_data, dtype=np.float64)
+                except Exception as e:
+                    print(f"배열 변환 실패 ({signal_name}): {e}")
+                    processed_data[signal_name] = np.array([])
+            elif isinstance(signal_data, np.ndarray):
+                # 이미 numpy 배열인 경우 그대로 사용
+                processed_data[signal_name] = signal_data
+            else:
+                print(f"지원되지 않는 데이터 타입 ({signal_name}): {type(signal_data)}")
+                processed_data[signal_name] = np.array([])
+                
+        return processed_data
     
     def get_nursing_records_for_alarm(self, patient_id: str, timestamp_str: str) -> List[Dict]:
         """알람 시간 기준 ±30분 내의 간호기록 반환"""
@@ -251,7 +280,7 @@ class PatientDataJson:
         return True
     
     def add_waveform_data(self, patient_id: str, timestamp: str, waveform_data: Dict):
-        """새 파형 데이터 추가"""
+        """새 파형 데이터 추가 (배열 또는 base64 형태 모두 지원)"""
         patient_data = self._load_patient_data(patient_id)
         if not patient_data:
             return False
@@ -259,7 +288,23 @@ class PatientDataJson:
         if "waveforms" not in patient_data:
             patient_data["waveforms"] = {}
         
-        patient_data["waveforms"][timestamp] = waveform_data
+        # 파형 데이터 전처리: numpy 배열을 리스트로 변환하여 저장 (JSON 직렬화 대비)
+        processed_waveform_data = {}
+        for signal_name, signal_data in waveform_data.items():
+            if isinstance(signal_data, np.ndarray):
+                # numpy 배열을 리스트로 변환
+                processed_waveform_data[signal_name] = signal_data.tolist()
+            elif isinstance(signal_data, list):
+                # 이미 리스트 형태는 그대로 사용
+                processed_waveform_data[signal_name] = signal_data
+            elif isinstance(signal_data, str):
+                # base64 문자열도 그대로 사용
+                processed_waveform_data[signal_name] = signal_data
+            else:
+                print(f"경고: 지원되지 않는 데이터 타입 ({signal_name}): {type(signal_data)}")
+                processed_waveform_data[signal_name] = []
+        
+        patient_data["waveforms"][timestamp] = processed_waveform_data
         self.save_patient_data(patient_id)
         return True
     
