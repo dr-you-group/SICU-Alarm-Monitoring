@@ -15,8 +15,13 @@ class WaveformWidget(QWidget):
         self.waveform_data = None
         self.decoded_waveforms = {}
         
-        # 샘플링 레이트 설정 (한 곳에서 관리)
-        self.SAMPLING_RATE = 250  # Hz (samples per second)
+        # 각 신호별 샘플링 레이트 설정
+        self.SAMPLING_RATES = {
+            "Lead-II": 500,   # Hz
+            "ABP": 125,       # Hz
+            "Pleth": 125,     # Hz
+            "Resp": 62.5      # Hz
+        }
         
         # 마우스 추적 활성화
         self.setMouseTracking(True)
@@ -50,14 +55,19 @@ class WaveformWidget(QWidget):
         
         self.update()
     
-    def set_sampling_rate(self, sampling_rate):
-        """샘플링 레이트 설정 (Hz)"""
-        self.SAMPLING_RATE = sampling_rate
-        self.update()  # 시간축이 변경되므로 다시 그리기
+    def get_sampling_rate(self, signal_name):
+        """특정 신호의 샘플링 레이트 반환 (Hz)"""
+        return self.SAMPLING_RATES.get(signal_name, 250)  # 기본값 250Hz
     
-    def get_sampling_rate(self):
-        """현재 샘플링 레이트 반환 (Hz)"""
-        return self.SAMPLING_RATE
+    def get_max_time_duration(self):
+        """모든 신호 중 가장 긴 시간 길이 반환 (초)"""
+        max_duration = 0
+        for signal in self.signals:
+            if signal in self.decoded_waveforms and len(self.decoded_waveforms[signal]) > 0:
+                sampling_rate = self.get_sampling_rate(signal)
+                duration = len(self.decoded_waveforms[signal]) / sampling_rate
+                max_duration = max(max_duration, duration)
+        return max_duration if max_duration > 0 else 10  # 기본값 10초
     
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -76,14 +86,8 @@ class WaveformWidget(QWidget):
         # 배경색 설정
         painter.fillRect(0, 0, width, total_height, QColor("#2A2A2A"))
         
-        # 전체 데이터 길이 계산 (가장 긴 신호 기준)
-        max_data_length = 0
-        for signal in self.signals:
-            if signal in self.decoded_waveforms and len(self.decoded_waveforms[signal]) > 0:
-                max_data_length = max(max_data_length, len(self.decoded_waveforms[signal]))
-        
-        # 샘플링 레이트 가정 (250Hz = 250 samples/second가 일반적)
-        total_time_seconds = max_data_length / self.SAMPLING_RATE if max_data_length > 0 else 10
+        # 모든 신호 중 가장 긴 시간 길이 계산 (각 신호의 샘플링 레이트 고려)
+        total_time_seconds = self.get_max_time_duration()
         
         for i, signal in enumerate(self.signals):
             signal_top = i * signal_height
@@ -274,8 +278,9 @@ class WaveformWidget(QWidget):
         # 해당 위치의 값 가져오기
         value = waveform[data_index]
         
-        # 시간 계산 (설정된 샘플링 레이트 사용)
-        time_seconds = data_index / self.SAMPLING_RATE
+        # 시간 계산 (해당 신호의 샘플링 레이트 사용)
+        sampling_rate = self.get_sampling_rate(signal_name)
+        time_seconds = data_index / sampling_rate
         
         # Y 좌표 계산 (화면에서의 실제 위치)
         signal_top = signal_index * signal_height
