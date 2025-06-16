@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import (QTableWidget, QTableWidgetItem, QHeaderView, QDialog, QVBoxLayout,
-                             QHBoxLayout, QLineEdit, QListWidget, QListWidgetItem, QCheckBox, QApplication)
+                             QHBoxLayout, QLineEdit, QListWidget, QListWidgetItem, QCheckBox)
 from PySide6.QtCore import Qt, QTimer
 from data_structure import patient_data
 from datetime import datetime, timedelta
@@ -240,9 +240,6 @@ class NursingRecordManager:
                     column_name = header_item.text()
                     self.column_widths[column_name] = self.nursing_table.columnWidth(i)
         
-        # 테이블 업데이트 일시 중단 (성능 향상)
-        self.nursing_table.setUpdatesEnabled(False)
-        
         # 컬럼 설정 (시행일시를 맨 앞으로, 간호진단프로토콜을 두 번째로)
         columns = [
             "시행일시",  # 맨 앞
@@ -300,11 +297,8 @@ class NursingRecordManager:
                 # 기본 너비 사용
                 self.nursing_table.setColumnWidth(i, default_widths[column_name])
         
-        # 컬럼 필터 초기화 - 처음에는 모든 값이 선택된 상태
-        self.column_filters = {}
-        for i in range(self.nursing_table.columnCount()):
-            column_name = self.nursing_table.horizontalHeaderItem(i).text()
-            self.column_filters[column_name] = "ALL_SELECTED"  # 초기에는 모든 값 선택된 상태
+        # 날짜/시간 컬럼 정렬 (시행일시가 첫 번째 컬럼이므로)
+        self.nursing_table.sortByColumn(0, Qt.AscendingOrder)  # 첫 번째 컬럼(시행일시)로 정렬
         
         # 원본 데이터 저장
         self.original_data = records
@@ -313,41 +307,14 @@ class NursingRecordManager:
         header.setContextMenuPolicy(Qt.CustomContextMenu)
         header.customContextMenuRequested.connect(self.show_column_filter_menu)
         
+        # 컬럼 필터 초기화 - 처음에는 모든 값이 선택된 상태
+        self.column_filters = {}
+        for i in range(self.nursing_table.columnCount()):
+            column_name = self.nursing_table.horizontalHeaderItem(i).text()
+            self.column_filters[column_name] = "ALL_SELECTED"  # 초기에는 모든 값 선택된 상태
+        
         # 컬럼 너비 변경 시 저장하는 시그널 연결
         header.sectionResized.connect(self.save_column_width)
-        
-        # 테이블 업데이트 재개
-        self.nursing_table.setUpdatesEnabled(True)
-        
-        # 날짜/시간 컬럼 정렬 (시행일시가 첫 번째 컬럼이므로)
-        self.nursing_table.sortByColumn(0, Qt.AscendingOrder)  # 첫 번째 컬럼(시행일시)로 정렬
-        
-        # 테이블 내용에 맞게 크기 조정 (렌더링 문제 해결)
-        self.nursing_table.resizeRowsToContents()
-        
-        # 강제 업데이트 및 리페인트 (렌더링 문제 해결)
-        self.nursing_table.update()
-        self.nursing_table.repaint()
-        
-        # 지연된 업데이트 (Qt 이벤트 루프 처리 후)
-        QTimer.singleShot(10, self._delayed_table_update)
-        
-        # 이벤트 루프 강제 처리 (렌더링 문제 해결)
-        QApplication.processEvents()
-    
-    def _delayed_table_update(self):
-        """지연된 테이블 업데이트 (렌더링 문제 해결용)"""
-        if self.nursing_table:
-            # 추가적인 업데이트 호출
-            self.nursing_table.viewport().update()
-            self.nursing_table.update()
-            
-            # 이벤트 처리 및 강제 렌더링
-            QApplication.processEvents()
-            QApplication.sendPostedEvents()
-            
-            # 사용자가 데이터를 인식할 수 있도록 로그 출력
-            print(f"테이블 렌더링 완료: {self.nursing_table.rowCount()}행, {self.nursing_table.columnCount()}열")
     
     def save_column_width(self, logical_index, old_size, new_size):
         """컬럼 너비 변경 시 저장"""
@@ -406,9 +373,6 @@ class NursingRecordManager:
     
     def apply_column_filters(self):
         """컬럼 필터 적용"""
-        # 테이블 업데이트 일시 중단 (성능 향상)
-        self.nursing_table.setUpdatesEnabled(False)
-        
         for row in range(self.nursing_table.rowCount()):
             show_row = True
             
@@ -441,16 +405,3 @@ class NursingRecordManager:
                             break
             
             self.nursing_table.setRowHidden(row, not show_row)
-        
-        # 테이블 업데이트 재개
-        self.nursing_table.setUpdatesEnabled(True)
-        
-        # 강제 업데이트 (필터 적용 후 렌더링 문제 해결)
-        self.nursing_table.update()
-        self.nursing_table.repaint()
-        
-        # 지연된 업데이트
-        QTimer.singleShot(5, lambda: self.nursing_table.viewport().update())
-        
-        # 이벤트 루프 강제 처리 (필터 적용 후 렌더링 문제 해결)
-        QApplication.processEvents()
