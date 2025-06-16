@@ -240,14 +240,15 @@ class NursingRecordManager:
                     column_name = header_item.text()
                     self.column_widths[column_name] = self.nursing_table.columnWidth(i)
         
-        # 컬럼 설정 (시행일시를 맨 뒤로 이동)
+        # 컬럼 설정 (시행일시를 맨 앞으로, 간호진단프로토콜을 두 번째로)
         columns = [
+            "시행일시",  # 맨 앞
+            "간호진단프로토콜(코드명)",  # 두 번째
             "간호중재(코드명)",
-            "간호활동(코드명)",
+            "간호활동(코드명)", 
             "간호속성코드(코드명)",
             "속성",
-            "Duty(코드명)",
-            "시행일시"  # 맨 뒤로 이동
+            "Duty(코드명)"
         ]
         
         self.nursing_table.setColumnCount(len(columns))
@@ -256,14 +257,15 @@ class NursingRecordManager:
         
         # 데이터 추가
         for row_idx, record in enumerate(records):
-            # 데이터 컬럼들 (시행일시를 맨 뒤로)
+            # 데이터 컬럼들 (시행일시를 맨 앞으로, 간호진단프로토콜을 두 번째로)
             data_columns = [
+                "시행일시",  # 맨 앞
+                "간호진단프로토콜(코드명)",  # 두 번째
                 "간호중재(코드명)",
                 "간호활동(코드명)",
                 "간호속성코드(코드명)",
                 "속성",
-                "Duty(코드명)",
-                "시행일시"
+                "Duty(코드명)"
             ]
             
             for col_idx, column in enumerate(data_columns):
@@ -278,12 +280,13 @@ class NursingRecordManager:
         
         # 저장된 컬럼 너비 복원 또는 기본 너비 설정
         default_widths = {
+            "시행일시": 150,  # 맨 앞
+            "간호진단프로토콜(코드명)": 200,  # 두 번째
             "간호중재(코드명)": 200,
             "간호활동(코드명)": 200, 
             "간호속성코드(코드명)": 200,
             "속성": 150,
-            "Duty(코드명)": 150,
-            "시행일시": 150  # 맨 뒤로 이동되었지만 기본 너비 설정
+            "Duty(코드명)": 150
         }
         
         for i, column_name in enumerate(columns):
@@ -294,8 +297,8 @@ class NursingRecordManager:
                 # 기본 너비 사용
                 self.nursing_table.setColumnWidth(i, default_widths[column_name])
         
-        # 날짜/시간 컨럼 정렬 (시행일시가 마지막 컬럼이므로)
-        self.nursing_table.sortByColumn(len(columns) - 1, Qt.AscendingOrder)  # 마지막 컬럼(시행일시)로 정렬
+        # 날짜/시간 컬럼 정렬 (시행일시가 첫 번째 컬럼이므로)
+        self.nursing_table.sortByColumn(0, Qt.AscendingOrder)  # 첫 번째 컬럼(시행일시)로 정렬
         
         # 원본 데이터 저장
         self.original_data = records
