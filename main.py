@@ -62,77 +62,98 @@ class SICUMonitoring(QMainWindow):
         main_layout.setSpacing(10)
         main_layout.setContentsMargins(10, 10, 10, 10)
         
-        main_layout.addWidget(self.createPatientInfoSection())
-        main_layout.addWidget(self.createAlarmInfoSection())
+        main_layout.addWidget(self.createPatientAndAlarmInfoSection())  # 통합 섹션
         main_layout.addWidget(self.createTimelineSection())
         main_layout.addWidget(self.createContentSection())
         main_layout.addWidget(self.createBottomSection())
         
         # 컴포넌트 관리자들 초기화 (UI 생성 후)
-        self.waveform_manager = WaveformManager(self.waveform_widget, self.waveform_info_label)
+        self.waveform_manager = WaveformManager(
+            self.waveform_widget, self.waveform_info_label,
+            self.numeric_table, self.numeric_info_label
+        )
         self.nursing_manager = NursingRecordManager(self.nursing_table, self.record_info_label, self)
         self.patient_manager = PatientDataManager(
             self.patient_id, self.admission_combo, self.date_combo, 
             self.alarm_info_label, self.timeline_widget
         )
         
-    def createPatientInfoSection(self):
-        patient_container = QWidget()
-        patient_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        patient_container.setFixedHeight(PATIENT_CONTAINER_HEIGHT)
+    def createPatientAndAlarmInfoSection(self):
+        """환자 정보와 알람 정보를 통합한 섹션 (우측에 Numeric 데이터 테이블)"""
+        info_section = QWidget()
+        info_section.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        info_section.setFixedHeight(240)  # Numeric 데이터 섹션 높이 증가에 맞춰 조정 (160 -> 240)
+        info_layout = QHBoxLayout(info_section)
+        info_layout.setContentsMargins(5, 5, 5, 5)
+        info_layout.setSpacing(15)
         
-        patient_layout = QGridLayout(patient_container)
+        # 왼쪽: 환자 정보 + 알람 정보
+        left_container = QWidget()
+        left_container.setMinimumWidth(600)
+        left_layout = QVBoxLayout(left_container)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(8)
+        
+        # 첫 번째 행: 환자 ID
+        patient_row = QWidget()
+        patient_layout = QHBoxLayout(patient_row)
         patient_layout.setContentsMargins(0, 0, 0, 0)
-        patient_layout.setHorizontalSpacing(5)
+        patient_layout.setSpacing(10)
         
         id_label = QLabel("환자 ID:")
         id_label.setFixedWidth(ID_LABEL_WIDTH)
-        patient_layout.addWidget(id_label, 0, 0)
+        patient_layout.addWidget(id_label)
         
         self.patient_id = QLineEdit()
-        self.patient_id.setText("11604980")  # 기본 환자 ID 설정
+        self.patient_id.setText("11604980")
         self.patient_id.setFixedWidth(PATIENT_ID_WIDTH)
-        patient_layout.addWidget(self.patient_id, 0, 1)
+        patient_layout.addWidget(self.patient_id)
         
         self.search_button = QPushButton("정보불러오기")
         self.search_button.setFixedWidth(SEARCH_BUTTON_WIDTH)
-        patient_layout.addWidget(self.search_button, 0, 2)
+        patient_layout.addWidget(self.search_button)
         
-        # 빈 공간 설정
-        patient_layout.setColumnStretch(3, 1)
+        patient_layout.addStretch()
+        left_layout.addWidget(patient_row)
         
-        return patient_container
+        # 두 번째 행: 입원기간 및 날짜 선택
+        admission_row = QWidget()
+        admission_layout = QHBoxLayout(admission_row)
+        admission_layout.setContentsMargins(0, 0, 0, 0)
+        admission_layout.setSpacing(10)
         
-    def createAlarmInfoSection(self):
-        info_section = QWidget()
-        info_section.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        info_section.setFixedHeight(INFO_SECTION_HEIGHT)
-        info_layout = QHBoxLayout(info_section)
-        info_layout.setContentsMargins(5, 0, 5, 0)
-        
-        # 입원 기간 선택 콤보박스 추가
         admission_label = QLabel("입원 기간:")
-        info_layout.addWidget(admission_label)
+        admission_layout.addWidget(admission_label)
         
         self.admission_combo = QComboBox()
         self.admission_combo.setFixedWidth(ADMISSION_PICKER_WIDTH)
-        self.admission_combo.setEnabled(False)  # 초기에는 비활성화
-        info_layout.addWidget(self.admission_combo)
+        self.admission_combo.setEnabled(False)
+        admission_layout.addWidget(self.admission_combo)
         
-        # 날짜 선택 콤보박스
         date_label = QLabel("날짜:")
-        info_layout.addWidget(date_label)
+        admission_layout.addWidget(date_label)
         
         self.date_combo = QComboBox()
         self.date_combo.setFixedWidth(DATE_PICKER_WIDTH)
-        self.date_combo.setEnabled(False)  # 초기에는 비활성화
-        info_layout.addWidget(self.date_combo)
+        self.date_combo.setEnabled(False)
+        admission_layout.addWidget(self.date_combo)
         
+        admission_layout.addStretch()
+        left_layout.addWidget(admission_row)
+        
+        # 세 번째 행: 알람 정보
         self.alarm_info_label = QLabel("환자 정보를 불러오고 입원 기간과 날짜를 선택해주세요")
         self.alarm_info_label.setStyleSheet("color: #888888; font-size: 14px;")
+        left_layout.addWidget(self.alarm_info_label)
         
-        info_layout.addWidget(self.alarm_info_label)
-        info_layout.addStretch()
+        # 남은 공간 채우기
+        left_layout.addStretch()
+        
+        info_layout.addWidget(left_container)
+        
+        # 오른쪽: Numeric 데이터 테이블
+        numeric_container = self.createNumericDataSection()
+        info_layout.addWidget(numeric_container)
         
         return info_section
     
@@ -306,6 +327,90 @@ class SICUMonitoring(QMainWindow):
         
         return right_frame
     
+    def createNumericDataSection(self):
+        """Numeric 데이터 섹션 생성 - 우측 상단에 배치 (8개 파라미터 모두 표시)"""
+        numeric_container = QWidget()
+        numeric_container.setFixedWidth(400)  # 고정 너비
+        numeric_container.setFixedHeight(220)  # 8개 행이 모두 보이도록 높이 증가 (150 -> 220)
+        
+        numeric_layout = QVBoxLayout(numeric_container)
+        numeric_layout.setContentsMargins(5, 2, 5, 2)  # 위아래 여백 줄임
+        numeric_layout.setSpacing(1)  # 간격 줄임
+        
+        # 헤더
+        numeric_label = QLabel("Numeric Data")
+        numeric_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+        numeric_label.setStyleSheet("font-weight: bold; font-size: 12px; margin-bottom: 2px;")  # 폰트 크기 증가
+        numeric_layout.addWidget(numeric_label)
+        
+        # Numeric 데이터 정보 라벨 (크기 줄임)
+        self.numeric_info_label = QLabel("알람 선택 시 표시")
+        self.numeric_info_label.setAlignment(Qt.AlignCenter)
+        self.numeric_info_label.setStyleSheet("color: #888888; font-size: 10px; margin: 2px;")  # 폰트 크기 증가
+        numeric_layout.addWidget(self.numeric_info_label)
+        
+        # Numeric 데이터 테이블 (8개 파라미터가 모두 보이도록)
+        self.numeric_table = QTableWidget()
+        self.numeric_table.setColumnCount(2)
+        self.numeric_table.setHorizontalHeaderLabels(["Parameter", "Value"])
+        self.numeric_table.setAlternatingRowColors(True)
+        self.numeric_table.setSelectionBehavior(QTableWidget.SelectRows)
+        
+        # 8행으로 고정 설정 (스크롤 없이 모두 보이도록)
+        self.numeric_table.setRowCount(8)
+        
+        # 테이블 스타일 (극도로 컴팩트하게 조정)
+        self.numeric_table.setStyleSheet("""
+            QTableWidget {
+                background-color: #2A2A2A;
+                color: white;
+                gridline-color: #444444;
+                border: 1px solid #444444;
+            }
+            QTableWidget::item {
+                padding: 3px;
+                border-bottom: 1px solid #444444;
+                font-size: 11px;  /* 폰트 크기 증가 */
+                margin: 0px;
+            }
+            QTableWidget::item:selected {
+                background-color: #3A3A3A;
+            }
+            QHeaderView::section {
+                background-color: #1A1A1A;
+                color: white;
+                padding: 3px;
+                border: 1px solid #444444;
+                font-weight: bold;
+                font-size: 10px;  /* 헤더 폰트 크기 증가 */
+                margin: 0px;
+            }
+        """)
+        
+        # 컬럼 크기 조정
+        numeric_header_view = self.numeric_table.horizontalHeader()
+        numeric_header_view.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        numeric_header_view.setSectionResizeMode(1, QHeaderView.Stretch)
+        # 헤더 높이 조정
+        numeric_header_view.setMinimumSectionSize(15)
+        numeric_header_view.setDefaultSectionSize(20)
+        
+        # 행 높이 조정 (8개가 모두 보이도록 적절한 크기로)
+        self.numeric_table.verticalHeader().setDefaultSectionSize(18)  # 10 -> 18로 증가
+        self.numeric_table.verticalHeader().setVisible(False)  # 세로 헤더 숨김
+        
+        # 스크롤바 비활성화
+        self.numeric_table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.numeric_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        
+        # 테이블에 더 많은 공간 할당
+        numeric_layout.addWidget(self.numeric_table, 1)
+        
+        # 초기에는 테이블 숨김
+        self.numeric_table.setVisible(False)
+        
+        return numeric_container
+    
     def createBottomSection(self):
         bottom_container = QWidget()
         bottom_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -477,15 +582,25 @@ class SICUMonitoring(QMainWindow):
         has_alarm = self.patient_manager.has_selected_alarm
         
         if has_date and has_alarm:
+            # 파형 섹션
             self.waveform_info_label.setVisible(False)
             self.waveform_widget.setVisible(True)
             
+            # 간호기록 섹션
             self.record_info_label.setVisible(False)
             self.nursing_table.setVisible(True)
         else:
+            # 파형 섹션
             self.waveform_info_label.setVisible(True)
             self.waveform_widget.setVisible(False)
             
+            # Numeric 데이터 섹션 (기본 안내 메시지 표시)
+            if hasattr(self, 'numeric_info_label'):
+                self.numeric_info_label.setVisible(True)
+            if hasattr(self, 'numeric_table'):
+                self.numeric_table.setVisible(False)
+            
+            # 간호기록 섹션
             self.record_info_label.setVisible(True)
             self.nursing_table.setVisible(False)
     

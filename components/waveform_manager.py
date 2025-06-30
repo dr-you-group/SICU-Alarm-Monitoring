@@ -1,6 +1,6 @@
 import sys
 import numpy as np
-from PySide6.QtWidgets import QWidget, QToolTip
+from PySide6.QtWidgets import QWidget, QToolTip, QTableWidgetItem
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter, QPainterPath, QPen, QColor, QFont, QBrush
 from data_structure import patient_data
@@ -315,9 +315,11 @@ class WaveformWidget(QWidget):
 
 
 class WaveformManager:
-    def __init__(self, waveform_widget, waveform_info_label):
+    def __init__(self, waveform_widget, waveform_info_label, numeric_table=None, numeric_info_label=None):
         self.waveform_widget = waveform_widget
         self.waveform_info_label = waveform_info_label
+        self.numeric_table = numeric_table
+        self.numeric_info_label = numeric_info_label
     
     def load_waveform_data(self, patient_id, timestamp):
         print(f"파형 데이터 로드: {timestamp}")
@@ -327,3 +329,61 @@ class WaveformManager:
         
         # 파형 위젯에 데이터 설정
         self.waveform_widget.set_waveform_data(waveform_data)
+        
+        # Numeric 데이터 처리
+        if self.numeric_table is not None and waveform_data:
+            self.load_numeric_data(waveform_data)
+    
+    def load_numeric_data(self, waveform_data):
+        """Numeric 데이터를 8행 고정 테이블에 로드"""
+        # 먼저 모든 행 초기화
+        for row in range(8):
+            for col in range(2):
+                empty_item = QTableWidgetItem("")
+                empty_item.setFlags(empty_item.flags() & ~Qt.ItemIsEditable)
+                self.numeric_table.setItem(row, col, empty_item)
+        
+        if not waveform_data or "Numeric" not in waveform_data:
+            # Numeric 데이터가 없는 경우
+            if self.numeric_info_label:
+                self.numeric_info_label.setText("Numeric 데이터가 없습니다")
+                self.numeric_info_label.setVisible(True)
+            self.numeric_table.setVisible(False)
+            return
+        
+        numeric_data = waveform_data["Numeric"]
+        
+        # 데이터 입력 (최대 8개)
+        for row, (parameter, value) in enumerate(list(numeric_data.items())[:8]):
+            # Parameter 컬럼
+            param_item = QTableWidgetItem(str(parameter))
+            param_item.setFlags(param_item.flags() & ~Qt.ItemIsEditable)  # 읽기 전용
+            self.numeric_table.setItem(row, 0, param_item)
+            
+            # Value 컬럼 (숫자 값에 따른 포맷팅)
+            if isinstance(value, float):
+                value_text = f"{value:.2f}"
+            else:
+                value_text = str(value)
+            
+            value_item = QTableWidgetItem(value_text)
+            value_item.setFlags(value_item.flags() & ~Qt.ItemIsEditable)  # 읽기 전용
+            
+            # 값에 따른 색상 설정 (선택적)
+            if parameter == "SpO2" and isinstance(value, (int, float)):
+                if value < 90:
+                    value_item.setBackground(QColor("#AA0000"))  # 빨간색 (위험)
+                elif value < 95:
+                    value_item.setBackground(QColor("#AAAA00"))  # 노란색 (주의)
+            elif parameter == "Pulse" and isinstance(value, (int, float)):
+                if value < 60 or value > 100:
+                    value_item.setBackground(QColor("#AAAA00"))  # 노란색 (주의)
+            
+            self.numeric_table.setItem(row, 1, value_item)
+        
+        # 테이블 표시
+        if self.numeric_info_label:
+            self.numeric_info_label.setVisible(False)
+        self.numeric_table.setVisible(True)
+        
+        print(f"Numeric 데이터 로드 완료: {len(numeric_data)}개 파라미터 (8행 테이블)")

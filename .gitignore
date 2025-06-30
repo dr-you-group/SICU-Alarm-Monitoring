@@ -1,5 +1,7 @@
 DATA.zip
+DATA_OLD/
 DATA/
+PklData/
 data_processing/
 TestData/
 .DS_Store

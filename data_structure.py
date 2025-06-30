@@ -149,6 +149,16 @@ class PatientDataJson:
         # 파형 데이터를 numpy 배열로 변환하여 반환
         processed_data = {}
         for signal_name, signal_data in raw_data.items():
+            # Numeric 데이터는 dict 형태로 그대로 유지
+            if signal_name == "Numeric":
+                if isinstance(signal_data, dict):
+                    processed_data[signal_name] = signal_data
+                else:
+                    print(f"Numeric 데이터가 예상과 다른 형태입니다: {type(signal_data)}")
+                    processed_data[signal_name] = {}
+                continue
+            
+            # 파형 신호들은 numpy 배열로 변환
             if isinstance(signal_data, str):
                 # base64 문자열인 경우 디코딩
                 try:
