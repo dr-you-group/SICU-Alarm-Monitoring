@@ -138,17 +138,28 @@ class PatientDataJson:
         """특정 타임스탬프의 파형 데이터 반환 (배열 또는 base64 형태 모두 지원)"""
         patient_data = self._load_patient_data(patient_id)
         if not patient_data:
+            print(f"DEBUG: 환자 데이터를 찾을 수 없음: {patient_id}")
             return None
         
         waveforms = patient_data.get("waveforms", {})
+        print(f"DEBUG: 전체 waveform 타임스탬프들: {list(waveforms.keys())[:5]}...")  # 처음 5개만 표시
+        
         raw_data = waveforms.get(timestamp)
+        print(f"DEBUG: 타임스탬프 '{timestamp}'에서 가져온 raw_data 키들: {list(raw_data.keys()) if raw_data else 'None'}")
         
         if not raw_data:
+            print(f"DEBUG: 타임스탬프 '{timestamp}'에 대한 데이터가 없음")
             return None
             
         # 파형 데이터를 numpy 배열로 변환하여 반환
         processed_data = {}
         for signal_name, signal_data in raw_data.items():
+            # AlarmLabel 데이터는 맨 먼저 처리 (문자열 또는 리스트 그대로 유지)
+            if signal_name == "AlarmLabel":
+                print(f"DEBUG: AlarmLabel 원본 데이터: {signal_data} (타입: {type(signal_data)})")
+                processed_data[signal_name] = signal_data
+                continue
+                
             # Numeric 데이터는 dict 형태로 그대로 유지
             if signal_name == "Numeric":
                 if isinstance(signal_data, dict):

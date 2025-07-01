@@ -289,26 +289,33 @@ class PatientDataManager:
             self.timeline_widget.select_alarm_by_index(0)
         else:
             # 알람이 없으면 기본 상태로 설정
-            self.update_selected_alarm("None", "")
+            self.update_selected_alarm("None", "", None, None)
     
-    def update_selected_alarm(self, color, time_str, timestamp=None):
+    def update_selected_alarm(self, color, time_str, timestamp=None, alarm_label=None):
         self.selected_alarm_color = color
         
         if color == "None":
             if self.date_combo.currentText():
-                self.alarm_info_label.setText(f"선택 알람: None ({self.date_combo.currentText()})")
+                alarm_text = f"선택 알람: None ({self.date_combo.currentText()})"
             else:
-                self.alarm_info_label.setText("날짜를 선택해주세요")
+                alarm_text = "날짜를 선택해주세요"
         else:
             if timestamp:
-                self.alarm_info_label.setText(f"선택 알람: {color} ({timestamp})")
+                alarm_text = f"선택 알람: {color} ({timestamp})"
             else:
                 date_str = self.date_combo.currentText()
-                self.alarm_info_label.setText(f"선택 알람: {color} ({date_str} {time_str})")
+                alarm_text = f"선택 알람: {color} ({date_str} {time_str})"
         
+        # AlarmLabel이 있으면 추가로 표시
+        if alarm_label and alarm_label.strip():
+            alarm_text += f"\nAlarmLabel: {alarm_label}"
+        
+        self.alarm_info_label.setText(alarm_text)
         self.update_alarm_info_style()
         
         print(f"선택 알람 정보 업데이트: {color}")
+        if alarm_label:
+            print(f"AlarmLabel: {alarm_label}")
     
     def update_alarm_info_style(self):
         if self.selected_alarm_color in ALARM_COLORS:

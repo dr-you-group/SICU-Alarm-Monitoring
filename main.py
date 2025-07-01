@@ -105,7 +105,7 @@ class SICUMonitoring(QMainWindow):
         patient_layout.addWidget(id_label)
         
         self.patient_id = QLineEdit()
-        self.patient_id.setText("11604980")
+        self.patient_id.setText("11079810")
         self.patient_id.setFixedWidth(PATIENT_ID_WIDTH)
         patient_layout.addWidget(self.patient_id)
         
@@ -537,8 +537,35 @@ class SICUMonitoring(QMainWindow):
             self.patient_manager.current_patient_id, date_str, time
         )
         
-        # PatientDataManager의 선택된 알람 정보 업데이트
-        self.patient_manager.update_selected_alarm(color, time, timestamp)
+        # 파형 데이터에서 AlarmLabel 가져오기
+        print(f"DEBUG: 환자 ID: {self.patient_manager.current_patient_id}, 타임스탬프: {timestamp}")
+        waveform_data = patient_data.get_waveform_data(self.patient_manager.current_patient_id, timestamp)
+        print(f"DEBUG: 전체 waveform_data 키들: {list(waveform_data.keys()) if waveform_data else 'None'}")
+        
+        alarm_label = None
+        if waveform_data and "AlarmLabel" in waveform_data:
+            raw_alarm_label = waveform_data["AlarmLabel"]
+            print(f"원본 AlarmLabel 데이터: {raw_alarm_label} (타입: {type(raw_alarm_label)})")
+            
+            if isinstance(raw_alarm_label, (list, tuple)):
+                print(f"리스트/튜플 길이: {len(raw_alarm_label)}")
+                if len(raw_alarm_label) > 0:
+                    print(f"첫 번째 요소: '{raw_alarm_label[0]}' (타입: {type(raw_alarm_label[0])})")
+                    if str(raw_alarm_label[0]).strip():
+                        alarm_label = str(raw_alarm_label[0]).strip()
+            elif isinstance(raw_alarm_label, str) and raw_alarm_label.strip():
+                alarm_label = raw_alarm_label.strip()
+            elif raw_alarm_label is not None:
+                converted = str(raw_alarm_label).strip()
+                if converted and converted != "[]" and converted != "None":
+                    alarm_label = converted
+            
+            print(f"처리된 AlarmLabel: '{alarm_label}'")
+        else:
+            print(f"DEBUG: waveform_data에 AlarmLabel이 없음. waveform_data: {waveform_data is not None}")
+        
+        # PatientDataManager의 선택된 알람 정보 업데이트 (AlarmLabel 포함)
+        self.patient_manager.update_selected_alarm(color, time, timestamp, alarm_label)
         self.patient_manager.has_selected_alarm = True
         
         # 저장된 주석 데이터 로드
