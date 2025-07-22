@@ -2,6 +2,7 @@ from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPainter, QPen, QColor, QBrush
 from data_structure import patient_data, ALARM_COLORS
+from .alarm_filters import default_alarm_filter, AlarmFilterConfig
 
 TIMELINE_HEIGHT = 40
 
@@ -276,20 +277,56 @@ class PatientDataManager:
         print(f"날짜 {date_str}의 알람 데이터 로드")
         
         # 데이터 구조에서 알람 정보 가져오기
-        alarms = patient_data.get_alarms_for_date(self.current_patient_id, self.current_admission_id, date_str)
+        raw_alarms = patient_data.get_alarms_for_date(self.current_patient_id, self.current_admission_id, date_str)
+        
+        # 필터 순차적 적용
+        filtered_alarms = raw_alarms
+        filter_steps = []
+        
+        # 1. 간호기록 필터 적용 (설정에서 활성화된 경우)
+        if AlarmFilterConfig.is_nursing_record_filter_enabled():
+            before_count = len(filtered_alarms)
+            filtered_alarms = default_alarm_filter.filter_alarms_with_nursing_records(
+                self.current_patient_id, date_str, filtered_alarms
+            )
+            after_count = len(filtered_alarms)
+            filter_steps.append(f"간호기록 필터: {before_count}개 → {after_count}개")
+        
+        # 2. 기술적 알람 필터 적용 (설정에서 활성화된 경우)
+        if AlarmFilterConfig.is_technical_alarm_filter_enabled():
+            before_count = len(filtered_alarms)
+            filtered_alarms = default_alarm_filter.filter_technical_alarms(
+                self.current_patient_id, date_str, filtered_alarms
+            )
+            after_count = len(filtered_alarms)
+            filter_steps.append(f"기술적 알람 필터: {before_count}개 → {after_count}개")
+        
+        # 필터링 결과 요약
+        if filter_steps:
+            print(f"알람 필터링 완료: 원본 {len(raw_alarms)}개 → 최종 {len(filtered_alarms)}개")
+            for step in filter_steps:
+                print(f"  - {step}")
+        else:
+            print(f"알람 필터링 비활성화: {len(filtered_alarms)}개 알람 모두 표시")
         
         # 타임라인 위젯에 알람 데이터 설정
-        self.timeline_widget.set_alarms(alarms)
+        self.timeline_widget.set_alarms(filtered_alarms)
         
         # 알람이 있으면 첫 번째 알람 자동 선택 및 포커스 설정
-        if alarms:
+        if filtered_alarms:
             # 타임라인 위젯에 포커스 설정 (키보드 입력 가능)
             self.timeline_widget.setFocus()
             # 첫 번째 알람 자동 선택
             self.timeline_widget.select_alarm_by_index(0)
         else:
             # 알람이 없으면 기본 상태로 설정
-            self.update_selected_alarm("None", "", None, None)
+            if len(raw_alarms) > 0:
+                # 원본 알람은 있었지만 필터링으로 제거된 경우
+                enabled_filters = AlarmFilterConfig.get_enabled_filters_summary()
+                self.update_selected_alarm("None", "", None, f"필터링으로 인해 표시할 알람이 없습니다\n{enabled_filters}")
+            else:
+                # 원본 알람이 아예 없는 경우
+                self.update_selected_alarm("None", "", None, None)
     
     def update_selected_alarm(self, color, time_str, timestamp=None, alarm_label=None):
         self.selected_alarm_color = color

@@ -17,6 +17,7 @@ from components.csv_manager import CSVManager
 from components.waveform_manager import WaveformWidget, WaveformManager
 from components.nursing_record_manager import NursingRecordManager
 from components.patient_data_manager import TimelineWidget, PatientDataManager
+from components.alarm_filters import AlarmFilterConfig, default_alarm_filter
 
 WINDOW_MIN_WIDTH = 900
 WINDOW_MIN_HEIGHT = 700
@@ -141,7 +142,26 @@ class SICUMonitoring(QMainWindow):
         admission_layout.addStretch()
         left_layout.addWidget(admission_row)
         
-        # 세 번째 행: 알람 정보
+        # 세 번째 행: 필터 옵션
+        filter_row = QWidget()
+        filter_layout = QHBoxLayout(filter_row)
+        filter_layout.setContentsMargins(0, 0, 0, 0)
+        filter_layout.setSpacing(15)
+        
+        self.nursing_filter_checkbox = QCheckBox("간호기록 없는 알람 숨기기")
+        self.nursing_filter_checkbox.setChecked(AlarmFilterConfig.is_nursing_record_filter_enabled())
+        self.nursing_filter_checkbox.toggled.connect(self.toggle_nursing_filter)
+        filter_layout.addWidget(self.nursing_filter_checkbox)
+        
+        self.technical_filter_checkbox = QCheckBox("기술적 알람 숨기기")
+        self.technical_filter_checkbox.setChecked(AlarmFilterConfig.is_technical_alarm_filter_enabled())
+        self.technical_filter_checkbox.toggled.connect(self.toggle_technical_filter)
+        filter_layout.addWidget(self.technical_filter_checkbox)
+        
+        filter_layout.addStretch()
+        left_layout.addWidget(filter_row)
+        
+        # 네 번째 행: 알람 정보
         self.alarm_info_label = QLabel("환자 정보를 불러오고 입원 기간과 날짜를 선택해주세요")
         self.alarm_info_label.setStyleSheet("color: #888888; font-size: 14px;")
         left_layout.addWidget(self.alarm_info_label)
@@ -507,6 +527,7 @@ class SICUMonitoring(QMainWindow):
         self.date_combo.currentTextChanged.connect(self.date_selected)
         self.true_button.clicked.connect(lambda: self.set_isalarm(True))
         self.false_button.clicked.connect(lambda: self.set_isalarm(False))
+        # 알람 필터 체크박스들은 이미 UI 생성 시 connect됨
     
     def search_patient(self):
         """환자 검색 - PatientDataManager에 위임"""
@@ -679,6 +700,26 @@ class SICUMonitoring(QMainWindow):
         """컬럼 필터 적용 - NursingRecordManager에 위임"""
         if self.nursing_manager:
             self.nursing_manager.apply_column_filters()
+    
+    def toggle_nursing_filter(self, checked):
+        """간호기록 필터 토글"""
+        AlarmFilterConfig.enable_nursing_record_filter(checked)
+        print(f"간호기록 필터: {'활성화' if checked else '비활성화'}")
+        
+        # 현재 날짜가 선택되어 있다면 알람 데이터 다시 로드
+        if self.patient_manager.has_selected_date and self.date_combo.currentText():
+            date_str = self.date_combo.currentText()
+            self.patient_manager.load_alarm_data_for_date(date_str)
+    
+    def toggle_technical_filter(self, checked):
+        """기술적 알람 필터 토글"""
+        AlarmFilterConfig.enable_technical_alarm_filter(checked)
+        print(f"기술적 알람 필터: {'활성화' if checked else '비활성화'}")
+        
+        # 현재 날짜가 선택되어 있다면 알람 데이터 다시 로드
+        if self.patient_manager.has_selected_date and self.date_combo.currentText():
+            date_str = self.date_combo.currentText()
+            self.patient_manager.load_alarm_data_for_date(date_str)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
