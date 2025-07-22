@@ -1,0 +1,54 @@
+A Lead Off
+ABP Artifact
+ABP Change Scale
+ABP Disconnect
+ABP No Pulse
+ABP No Transducer
+ABP Noisy Signal
+ABP Overrange
+ART Artifact
+ART Disconnect
+ART No Pulse
+ART No Transducer
+ART Noisy Signal
+Alarms Paused
+CVP Artifact
+CVP No Transducer
+CVP Unplugged
+Check Patient ID
+ECG Check Cable
+ECG Leads Off
+ECG NoisySignal
+ECG/Arrh AlarmsOff
+I Lead Off
+LA Lead Off
+LL Lead Off
+MMS Unplugged
+NBP Check Cuff
+NBP Equip Malf
+NBP Interrupted
+No Data Monitor
+PAP Artifact
+PAP Disconnect
+PAP No Transducer
+PAP Noisy Signal
+PPV Chk Sources
+PPV bad ABP Signal
+Pacer Not Capt
+RA Lead Off
+RL Lead Off
+Resp Leads Off
+S Lead Off
+Some ECG AlarmsOff
+SpO2 Chk Sensor
+SpO2 Interference
+SpO2 Low Perf
+SpO2 No Sensor
+SpO2 NoisySignal
+SpO2 Sensor Malf
+SpO2 Sensor Off
+Temp NoTransducer
+Temp Unplugged
+TesophNoTransducer
+Tskin NoTransducer
+Tskin Unplugged

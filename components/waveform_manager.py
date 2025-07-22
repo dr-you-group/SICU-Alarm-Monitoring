@@ -336,9 +336,9 @@ class WaveformManager:
     
     def load_numeric_data(self, waveform_data):
         """Numeric 데이터를 8행 고정 테이블에 로드"""
-        # 먼저 모든 행 초기화
+        # 먼저 모든 행 초기화 (3개 컬럼)
         for row in range(8):
-            for col in range(2):
+            for col in range(3):
                 empty_item = QTableWidgetItem("")
                 empty_item.setFlags(empty_item.flags() & ~Qt.ItemIsEditable)
                 self.numeric_table.setItem(row, col, empty_item)
@@ -354,7 +354,15 @@ class WaveformManager:
         numeric_data = waveform_data["Numeric"]
         
         # 데이터 입력 (최대 8개)
-        for row, (parameter, value) in enumerate(list(numeric_data.items())[:8]):
+        for row, (parameter, data) in enumerate(list(numeric_data.items())[:8]):
+            # 데이터 구조: [value, time_diff_sec]
+            if isinstance(data, (list, tuple)) and len(data) >= 2:
+                value, time_diff_sec = data[0], data[1]
+            else:
+                # 예상치 못한 데이터 구조의 경우 기본값 사용
+                value = data if not isinstance(data, (list, tuple)) else data[0] if len(data) > 0 else 0
+                time_diff_sec = data[1] if isinstance(data, (list, tuple)) and len(data) > 1 else 0
+            
             # Parameter 컬럼
             param_item = QTableWidgetItem(str(parameter))
             param_item.setFlags(param_item.flags() & ~Qt.ItemIsEditable)  # 읽기 전용
@@ -380,10 +388,20 @@ class WaveformManager:
                     value_item.setBackground(QColor("#AAAA00"))  # 노란색 (주의)
             
             self.numeric_table.setItem(row, 1, value_item)
+            
+            # Time Diff Sec 컬럼
+            if isinstance(time_diff_sec, float):
+                time_text = f"{time_diff_sec:.3f}"
+            else:
+                time_text = str(time_diff_sec)
+            
+            time_item = QTableWidgetItem(time_text)
+            time_item.setFlags(time_item.flags() & ~Qt.ItemIsEditable)  # 읽기 전용
+            self.numeric_table.setItem(row, 2, time_item)
         
         # 테이블 표시
         if self.numeric_info_label:
             self.numeric_info_label.setVisible(False)
         self.numeric_table.setVisible(True)
         
-        print(f"Numeric 데이터 로드 완료: {len(numeric_data)}개 파라미터 (8행 테이블)")
+        print(f"Numeric 데이터 로드 완료: {len(numeric_data)}개 파라미터 (8행 3컴럼 테이블)")

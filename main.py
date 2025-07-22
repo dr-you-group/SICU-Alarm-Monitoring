@@ -351,8 +351,8 @@ class SICUMonitoring(QMainWindow):
         
         # Numeric 데이터 테이블 (8개 파라미터가 모두 보이도록)
         self.numeric_table = QTableWidget()
-        self.numeric_table.setColumnCount(2)
-        self.numeric_table.setHorizontalHeaderLabels(["Parameter", "Value"])
+        self.numeric_table.setColumnCount(3)
+        self.numeric_table.setHorizontalHeaderLabels(["Parameter", "Value", "Time Diff (s)"])
         self.numeric_table.setAlternatingRowColors(True)
         self.numeric_table.setSelectionBehavior(QTableWidget.SelectRows)
         
@@ -391,6 +391,7 @@ class SICUMonitoring(QMainWindow):
         numeric_header_view = self.numeric_table.horizontalHeader()
         numeric_header_view.setSectionResizeMode(0, QHeaderView.ResizeToContents)
         numeric_header_view.setSectionResizeMode(1, QHeaderView.Stretch)
+        numeric_header_view.setSectionResizeMode(2, QHeaderView.ResizeToContents)
         # 헤더 높이 조정
         numeric_header_view.setMinimumSectionSize(15)
         numeric_header_view.setDefaultSectionSize(20)
