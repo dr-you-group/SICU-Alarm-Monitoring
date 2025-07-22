@@ -106,7 +106,7 @@ class SICUMonitoring(QMainWindow):
         patient_layout.addWidget(id_label)
         
         self.patient_id = QLineEdit()
-        self.patient_id.setText("11079810")
+        self.patient_id.setText("1674060")
         self.patient_id.setFixedWidth(PATIENT_ID_WIDTH)
         patient_layout.addWidget(self.patient_id)
         

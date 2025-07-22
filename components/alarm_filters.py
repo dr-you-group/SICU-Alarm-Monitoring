@@ -124,6 +124,7 @@ class AlarmFilter:
     def filter_technical_alarms(self, patient_id, date_str, alarms):
         """
         기술적 알람을 제거하여 필터링된 알람 목록 반환
+        알람에 여러 라벨이 있는 경우, 모든 라벨이 기술적 알람일 때만 제거
         
         Args:
             patient_id: 환자 ID
@@ -137,6 +138,10 @@ class AlarmFilter:
             print("기술적 알람 목록이 비어있음 - 필터링하지 않음")
             return alarms
         
+        print(f"\n=== 기술적 알람 필터링 시작 ===")
+        print(f"로드된 기술적 알람 수: {len(self.technical_alarms)}")
+        print(f"예시 정규화된 기술적 알람: {list(self.technical_alarms)[:10]}")
+        
         filtered_alarms = []
         filtered_out_count = 0
         
@@ -147,35 +152,99 @@ class AlarmFilter:
             
             # 파형 데이터에서 AlarmLabel 가져오기
             waveform_data = patient_data.get_waveform_data(patient_id, timestamp)
-            alarm_label = ""
+            alarm_labels = []  # 모든 라벨들을 리스트로 수집
+            
+            print(f"\n--- 알람 분석: {alarm.get('color', 'Unknown')} ({alarm.get('time', 'Unknown')}) ---")
             
             if waveform_data and "AlarmLabel" in waveform_data:
                 raw_alarm_label = waveform_data["AlarmLabel"]
+                print(f"원본 AlarmLabel: {raw_alarm_label} (타입: {type(raw_alarm_label)})")
                 
-                # AlarmLabel 데이터 처리 (리스트, 문자열, 기타 형식 모두 지원)
+                # AlarmLabel 데이터 처리 - 다양한 형식 지원
                 if isinstance(raw_alarm_label, (list, tuple)):
-                    if len(raw_alarm_label) > 0 and str(raw_alarm_label[0]).strip():
-                        alarm_label = str(raw_alarm_label[0]).strip()
-                elif isinstance(raw_alarm_label, str) and raw_alarm_label.strip():
-                    alarm_label = raw_alarm_label.strip()
+                    print(f"리스트/튜플 형식 처리: {len(raw_alarm_label)}개 요소")
+                    # 리스트/튜플 형식: 각 요소를 개별로 처리
+                    for i, item in enumerate(raw_alarm_label):
+                        print(f"  [{i}]: '{item}' (타입: {type(item)})")
+                        if item and str(item).strip():
+                            label = str(item).strip()
+                            if label and label != "None" and label != "[]":
+                                alarm_labels.append(label)
+                elif isinstance(raw_alarm_label, str):
+                    print(f"문자열 형식 처리: '{raw_alarm_label}'")
+                    # 문자열에 슬래시가 포함되어 있는지 확인
+                    if " / " in raw_alarm_label:
+                        # 슬래시로 구분된 여러 라벨 처리
+                        labels = [label.strip() for label in raw_alarm_label.split(" / ")]
+                        print(f"슬래시 구분 처리: {labels}")
+                        for label in labels:
+                            if label and label != "None" and label != "[]":
+                                alarm_labels.append(label)
+                    elif "/" in raw_alarm_label:
+                        # 공백 없는 슬래시로 구분된 경우
+                        labels = [label.strip() for label in raw_alarm_label.split("/")]
+                        print(f"슬래시 구분 처리(공백없음): {labels}")
+                        for label in labels:
+                            if label and label != "None" and label != "[]":
+                                alarm_labels.append(label)
+                    elif raw_alarm_label.strip():
+                        # 단일 문자엱 라벨
+                        label = raw_alarm_label.strip()
+                        if label and label != "None" and label != "[]":
+                            alarm_labels.append(label)
                 elif raw_alarm_label is not None:
+                    print(f"기타 형식 처리: '{raw_alarm_label}' (타입: {type(raw_alarm_label)})")
+                    # 기타 형식: 문자열로 변환 후 처리
                     converted = str(raw_alarm_label).strip()
                     if converted and converted != "[]" and converted != "None":
-                        alarm_label = converted
-            
-            # 기술적 알람인지 확인
-            if alarm_label and self.is_technical_alarm(alarm_label):
-                filtered_out_count += 1
-                print(f"기술적 알람 필터링됨: {alarm.get('color', 'Unknown')} ({alarm.get('time', 'Unknown')}) - '{alarm_label}'")
+                        alarm_labels.append(converted)
             else:
-                # 비기술적 알람 또는 AlarmLabel이 없는 알람
+                print("파형 데이터에 AlarmLabel 없음")
+            
+            print(f"추출된 라벨들: {alarm_labels}")
+            
+            # 알람 라벨 분석 및 필터링 결정
+            if not alarm_labels:
+                # AlarmLabel이 없는 경우 - 알람 유지
                 filtered_alarms.append(alarm)
-                if alarm_label:
-                    print(f"알람 통과 (비기술적): {alarm.get('color', 'Unknown')} ({alarm.get('time', 'Unknown')}) - '{alarm_label}'")
+                print("결과: 알람 통과 (라벨 없음)")
+            else:
+                # 모든 라벨이 기술적 알람인지 확인
+                technical_count = 0
+                clinical_count = 0
+                technical_labels = []
+                clinical_labels = []
+                
+                print("라벨별 분석:")
+                for label in alarm_labels:
+                    normalized_label = self.normalize_alarm_label(label)
+                    is_technical = self.is_technical_alarm(label)
+                    print(f"  '{label}' → 정규화: '{normalized_label}' → 기술적: {is_technical}")
+                    
+                    if is_technical:
+                        technical_count += 1
+                        technical_labels.append(label)
+                    else:
+                        clinical_count += 1
+                        clinical_labels.append(label)
+                
+                print(f"분석 결과: 기술적 {technical_count}개, 임상적 {clinical_count}개")
+                
+                # 필터링 결정: 모든 라벨이 기술적일 때만 제거
+                if clinical_count == 0 and technical_count > 0:
+                    # 모든 라벨이 기술적 알람인 경우 - 알람 제거
+                    filtered_out_count += 1
+                    print(f"결과: 기술적 알람 필터링됨 - 모든 라벨이 기술적 [{', '.join(technical_labels)}]")
                 else:
-                    print(f"알람 통과 (라벨 없음): {alarm.get('color', 'Unknown')} ({alarm.get('time', 'Unknown')})")
+                    # 하나라도 임상적 알람이 있는 경우 - 알람 유지
+                    filtered_alarms.append(alarm)
+                    if clinical_count > 0:
+                        print(f"결과: 알람 통과 (임상적 라벨 포함) - 임상적[{', '.join(clinical_labels)}], 기술적[{', '.join(technical_labels)}]")
+                    else:
+                        # 이론적으로 도달할 수 없는 케이스지만 안전을 위해 추가
+                        print(f"결과: 알람 통과 (예상치 못한 경우) - 라벨: [{', '.join(alarm_labels)}]")
         
-        print(f"기술적 알람 필터링 완료: 원본 {len(alarms)}개 → 통과 {len(filtered_alarms)}개, 제거 {filtered_out_count}개")
+        print(f"\n=== 기술적 알람 필터링 완료: 원본 {len(alarms)}개 → 통과 {len(filtered_alarms)}개, 제거 {filtered_out_count}개 ===")
         return filtered_alarms
     
     def filter_alarms_with_nursing_records(self, patient_id, date_str, alarms):
