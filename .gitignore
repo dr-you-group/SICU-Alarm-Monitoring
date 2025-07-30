@@ -5,6 +5,8 @@ PklData/
 data_processing/
 TestData/
 .DS_Store
+alarm_annotations.csv
+alarm_validation_log.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
