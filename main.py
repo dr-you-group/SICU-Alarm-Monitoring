@@ -106,7 +106,7 @@ class SICUMonitoring(QMainWindow):
         patient_layout.addWidget(id_label)
         
         self.patient_id = QLineEdit()
-        self.patient_id.setText("1674060")
+        self.patient_id.setText("")
         self.patient_id.setFixedWidth(PATIENT_ID_WIDTH)
         patient_layout.addWidget(self.patient_id)
         
@@ -687,6 +687,46 @@ class SICUMonitoring(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+
+
+    app.setStyle("Fusion")  # 모던한 스타일 적용
+    
+    # Qt 팔레트를 라이트 모드로 강제 설정 (다크 모드 방지)
+    from PySide6.QtGui import QPalette
+    light_palette = QPalette()
+    light_palette.setColor(QPalette.Window, Qt.white)
+    light_palette.setColor(QPalette.WindowText, Qt.black)
+    light_palette.setColor(QPalette.Base, Qt.white)
+    light_palette.setColor(QPalette.AlternateBase, Qt.lightGray)
+    light_palette.setColor(QPalette.ToolTipBase, Qt.white)
+    light_palette.setColor(QPalette.ToolTipText, Qt.black)
+    light_palette.setColor(QPalette.Text, Qt.black)
+    light_palette.setColor(QPalette.Button, Qt.white)
+    light_palette.setColor(QPalette.ButtonText, Qt.black)
+    light_palette.setColor(QPalette.BrightText, Qt.red)
+    light_palette.setColor(QPalette.Link, Qt.blue)
+    light_palette.setColor(QPalette.Highlight, Qt.blue)
+    light_palette.setColor(QPalette.HighlightedText, Qt.white)
+    app.setPalette(light_palette)
+    
+    # 애플리케이션 전체에 흰색 배경 강제 적용
+    app.setStyleSheet("""
+        QApplication {
+            background-color: white;
+            color: #333333;
+        }
+        QWidget {
+            background-color: white;
+            color: #333333;
+        }
+        QDialog {
+            background-color: white;
+            color: #333333;
+        }
+    """)
+
+
+
     window = SICUMonitoring()
     window.show()
     sys.exit(app.exec())
