@@ -298,21 +298,23 @@ class SICUMonitoring(QMainWindow):
         
         # 간호기록 테이블 (엑셀 스타일)
         self.nursing_table = QTableWidget()
-        self.nursing_table.setAlternatingRowColors(True)
+        self.nursing_table.setAlternatingRowColors(False)  # 번갈아가는 색상 비활성화
         self.nursing_table.setSelectionBehavior(QTableWidget.SelectRows)
         self.nursing_table.setStyleSheet("""
             QTableWidget {
-                background-color: #2A2A2A;
+                background-color: #000000;  /* 배경 검은색 */
                 color: white;
                 gridline-color: #444444;
                 border: 1px solid #444444;
             }
             QTableWidget::item {
+                background-color: #000000;  /* 아이템 배경 검은색 */
+                color: white;  /* 글씨 하얀색 */
                 padding: 5px;
                 border-bottom: 1px solid #444444;
             }
             QTableWidget::item:selected {
-                background-color: #3A3A3A;
+                background-color: #1A1A1A;  /* 선택시 약간 밝은 검은색 */
             }
             QHeaderView::section {
                 background-color: #1A1A1A;
@@ -356,7 +358,7 @@ class SICUMonitoring(QMainWindow):
         self.numeric_table = QTableWidget()
         self.numeric_table.setColumnCount(3)
         self.numeric_table.setHorizontalHeaderLabels(["Parameter", "Value", "Time Diff (s)"])
-        self.numeric_table.setAlternatingRowColors(True)
+        self.numeric_table.setAlternatingRowColors(False)  # 번갈아가는 색상 비활성화
         self.numeric_table.setSelectionBehavior(QTableWidget.SelectRows)
         
         # 8행으로 고정 설정 (스크롤 없이 모두 보이도록)
@@ -365,19 +367,21 @@ class SICUMonitoring(QMainWindow):
         # 테이블 스타일 (극도로 컴팩트하게 조정)
         self.numeric_table.setStyleSheet("""
             QTableWidget {
-                background-color: #2A2A2A;
+                background-color: #000000;  /* 배경 검은색 */
                 color: white;
                 gridline-color: #444444;
                 border: 1px solid #444444;
             }
             QTableWidget::item {
+                background-color: #000000;  /* 아이템 배경 검은색 */
+                color: white;  /* 글씨 하얀색 */
                 padding: 3px;
                 border-bottom: 1px solid #444444;
                 font-size: 11px;  /* 폰트 크기 증가 */
                 margin: 0px;
             }
             QTableWidget::item:selected {
-                background-color: #3A3A3A;
+                background-color: #1A1A1A;  /* 선택시 약간 밝은 검은색 */
             }
             QHeaderView::section {
                 background-color: #1A1A1A;

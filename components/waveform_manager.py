@@ -377,16 +377,6 @@ class WaveformManager:
             value_item = QTableWidgetItem(value_text)
             value_item.setFlags(value_item.flags() & ~Qt.ItemIsEditable)  # 읽기 전용
             
-            # 값에 따른 색상 설정 (선택적)
-            if parameter == "SpO2" and isinstance(value, (int, float)):
-                if value < 90:
-                    value_item.setBackground(QColor("#AA0000"))  # 빨간색 (위험)
-                elif value < 95:
-                    value_item.setBackground(QColor("#AAAA00"))  # 노란색 (주의)
-            elif parameter == "Pulse" and isinstance(value, (int, float)):
-                if value < 60 or value > 100:
-                    value_item.setBackground(QColor("#AAAA00"))  # 노란색 (주의)
-            
             self.numeric_table.setItem(row, 1, value_item)
             
             # Time Diff Sec 컬럼
