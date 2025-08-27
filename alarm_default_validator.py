@@ -110,16 +110,16 @@ class AlarmValidator:
         # 일치하는 기록이 없으면 False 알람
         return False, None
     
-    def validate_and_save_alarm(self, patient_id: str, alarm_timestamp: str, 
-                               nursing_records: List[Dict], csv_manager) -> bool:
+    def validate_and_save_alarm(self, patient_id: str, admission_id: str, 
+                               alarm_timestamp: str, nursing_records: List[Dict]) -> bool:
         """
-        알람을 검증하고 결과를 CSV에 저장
+        알람을 검증하고 결과를 JSON에 저장
         
         Args:
             patient_id: 환자 ID
+            admission_id: 입원 기간 ID
             alarm_timestamp: 알람 발생 시간 (YYYY-MM-DD HH:MM:SS)
             nursing_records: 알람 시간 ±30분 내의 간호기록
-            csv_manager: CSVManager 인스턴스
             
         Returns:
             True 알람 여부
@@ -127,18 +127,24 @@ class AlarmValidator:
         # 알람 검증
         is_true_alarm, matched_record = self.validate_alarm(nursing_records)
         
-        # 알람 ID 생성 (날짜와 시간 분리)
+        # 날짜와 시간 분리
         try:
             dt = datetime.strptime(alarm_timestamp, "%Y-%m-%d %H:%M:%S")
             date_str = dt.strftime("%Y-%m-%d")
             time_str = dt.strftime("%H:%M:%S")
-            alarm_id = csv_manager.generate_alarm_id(patient_id, date_str, time_str)
             
             # 코멘트는 빈 공간으로
             comment = ""
             
-            # CSV에 저장
-            csv_manager.set_annotation(alarm_id, is_true_alarm, comment)
+            # JSON에 직접 저장
+            from data_structure import patient_data
+            success = patient_data.set_alarm_annotation(
+                patient_id, admission_id, date_str, time_str, is_true_alarm, comment
+            )
+            
+            if not success:
+                print(f"알람 저장 실패: {patient_id}-{date_str}-{time_str}")
+                return False
             
         except Exception as e:
             print(f"알람 저장 오류: {e}")
@@ -146,13 +152,12 @@ class AlarmValidator:
         
         return is_true_alarm
     
-    def process_all_alarms(self, patient_data_json, csv_manager):
+    def process_all_alarms(self, patient_data_json):
         """
-        모든 환자의 모든 알람에 대해 자동 판정 수행
+        모든 환자의 모든 알람에 대해 자동 판정 수행 (JSON 저장 방식)
         
         Args:
             patient_data_json: PatientDataJson 인스턴스
-            csv_manager: CSVManager 인스턴스
         """
         processed_count = 0
         true_alarm_count = 0
@@ -181,12 +186,11 @@ class AlarmValidator:
                         # 알람 타임스탬프 생성
                         alarm_timestamp = f"{date_str} {alarm['time']}"
                         
-                        # 알람 ID 생성
-                        alarm_id = csv_manager.generate_alarm_id(patient_id, date_str, alarm['time'])
-                        
-                        # 이미 저장된 주석이 있는지 확인
-                        existing_annotation = csv_manager.get_annotation(alarm_id)
-                        if existing_annotation['isAlarm'] is not None:
+                        # 이미 저장된 annotation이 있는지 확인
+                        existing_annotation = patient_data_json.get_alarm_annotation(
+                            patient_id, admission_id, date_str, alarm['time']
+                        )
+                        if existing_annotation['classification'] is not None:
                             # 이미 수동으로 라벨링된 경우 건너뛰기
                             continue
                         
@@ -197,7 +201,7 @@ class AlarmValidator:
                         
                         # 자동 판정 및 저장
                         is_true = self.validate_and_save_alarm(
-                            patient_id, alarm_timestamp, nursing_records, csv_manager
+                            patient_id, admission_id, alarm_timestamp, nursing_records
                         )
                         
                         processed_count += 1
@@ -207,9 +211,6 @@ class AlarmValidator:
                         # 진행 상황 출력 (100개마다)
                         if processed_count % 100 == 0:
                             print(f"  진행중... {processed_count}개 처리 (True: {true_alarm_count})")
-        
-        # 결과 저장
-        csv_manager.save_annotations()
         
         print(f"\n자동 판정 완료:")
         print(f"  처리된 알람: {processed_count}개")
@@ -222,14 +223,12 @@ class AlarmValidator:
 # 독립 실행용 스크립트
 if __name__ == "__main__":
     from data_structure import PatientDataJson
-    from components.csv_manager import CSVManager
     
     # 인스턴스 생성
     validator = AlarmValidator("data_processing/nr_alarm_true_list.tsv")
     patient_data = PatientDataJson()
-    csv_manager = CSVManager("alarm_annotations.csv")
     
-    # 모든 알람 자동 판정
-    print("알람 자동 판정을 시작합니다...")
-    validator.process_all_alarms(patient_data, csv_manager)
+    # 모든 알람 자동 판정 (JSON 저장 방식)
+    print("알람 자동 판정을 시작합니다... (JSON 저장)")
+    validator.process_all_alarms(patient_data)
     print("완료!")

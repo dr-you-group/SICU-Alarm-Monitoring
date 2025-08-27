@@ -272,6 +272,12 @@ class PatientDataJson:
         if date_str not in patient_data["alarms"][admission_id]:
             patient_data["alarms"][admission_id][date_str] = []
         
+        # classification과 comment 필드가 없으면 추가
+        if "classification" not in alarm_data:
+            alarm_data["classification"] = None
+        if "comment" not in alarm_data:
+            alarm_data["comment"] = ""
+        
         patient_data["alarms"][admission_id][date_str].append(alarm_data)
         self.save_patient_data(patient_id)
         return True
@@ -467,6 +473,66 @@ class PatientDataJson:
                 summary["patients"][patient_id] = patient_summary
         
         return summary
+    
+    def get_alarm_annotation(self, patient_id: str, admission_id: str, date_str: str, time_str: str) -> Dict:
+        """알람의 classification과 comment 가져오기"""
+        patient_data = self._load_patient_data(patient_id)
+        if not patient_data:
+            return {'classification': None, 'comment': ''}
+        
+        alarms = patient_data.get("alarms", {})
+        if admission_id not in alarms or date_str not in alarms[admission_id]:
+            return {'classification': None, 'comment': ''}
+        
+        # 해당 시간의 알람 찾기
+        for alarm in alarms[admission_id][date_str]:
+            if alarm.get("time") == time_str:
+                return {
+                    'classification': alarm.get("classification"),
+                    'comment': alarm.get("comment", "")
+                }
+        
+        return {'classification': None, 'comment': ''}
+    
+    def set_alarm_annotation(self, patient_id: str, admission_id: str, date_str: str, 
+                           time_str: str, classification, comment: str) -> bool:
+        """알람의 classification과 comment 설정"""
+        patient_data = self._load_patient_data(patient_id)
+        if not patient_data:
+            return False
+        
+        alarms = patient_data.get("alarms", {})
+        if admission_id not in alarms or date_str not in alarms[admission_id]:
+            return False
+        
+        # 해당 시간의 알람 찾기
+        for alarm in alarms[admission_id][date_str]:
+            if alarm.get("time") == time_str:
+                alarm["classification"] = classification
+                alarm["comment"] = comment
+                self.save_patient_data(patient_id)
+                return True
+        
+        return False
+    
+    def get_patient_alarm_stats(self, patient_id: str) -> Dict:
+        """환자의 알람 통계 정보 반환 (라벨링된 개수/전체 개수)"""
+        patient_data = self._load_patient_data(patient_id)
+        if not patient_data:
+            return {'labeled': 0, 'total': 0}
+        
+        labeled_count = 0
+        total_count = 0
+        
+        alarms = patient_data.get("alarms", {})
+        for admission_id, admission_alarms in alarms.items():
+            for date_str, date_alarms in admission_alarms.items():
+                for alarm in date_alarms:
+                    total_count += 1
+                    if alarm.get("classification") is not None:
+                        labeled_count += 1
+        
+        return {'labeled': labeled_count, 'total': total_count}
 
 # 전역 인스턴스 생성 (기존 코드와의 호환성 유지)
 patient_data = PatientDataJson()

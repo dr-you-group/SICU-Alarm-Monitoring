@@ -228,9 +228,13 @@ class WaveformWidget(QWidget):
             painter.drawText(tooltip_x, tooltip_y, tooltip_text)
     
     def mouseMoveEvent(self, event):
-        """마우스 이동 시 해당 위치의 파형 값 계산"""
+        """마우스 이동 시 해당 위치의 파형 값 계산 (화면 크기 변경에 대한 안정성 보장)"""
         width = self.width()
         total_height = self.height()
+        
+        if width <= 0 or total_height <= 0:
+            return
+            
         signal_height = total_height / len(self.signals)
         
         LEFT_MARGIN = 80
@@ -263,17 +267,16 @@ class WaveformWidget(QWidget):
             self.update()
             return
         
-        # 마우스 위치에서 데이터 인덱스 계산
-        plot_width = width - LEFT_MARGIN - RIGHT_MARGIN
-        relative_x = mouse_x - LEFT_MARGIN
+        # 마우스 위치에서 데이터 인덱스 계산 (안정적인 좌표 매핑)
+        plot_width = max(width - LEFT_MARGIN - RIGHT_MARGIN, 1)  # 0 방지
+        relative_x = max(0, min(mouse_x - LEFT_MARGIN, plot_width))  # 범위 제한
         
         waveform = self.decoded_waveforms[signal_name]
-        data_index = int((relative_x / plot_width) * len(waveform))
         
-        if data_index < 0 or data_index >= len(waveform):
-            self.hover_info = {'x': -1, 'y': -1, 'signal': None, 'value': None, 'time': None}
-            self.update()
-            return
+        # 정규화된 좌표로 데이터 인덱스 계산 (더 정확한 매핑)
+        normalized_x = relative_x / plot_width  # 0.0 ~ 1.0
+        data_index = int(normalized_x * (len(waveform) - 1))  # 마지막 인덱스 포함
+        data_index = max(0, min(data_index, len(waveform) - 1))  # 범위 제한
         
         # 해당 위치의 값 가져오기
         value = waveform[data_index]
@@ -287,17 +290,17 @@ class WaveformWidget(QWidget):
         signal_bottom = (signal_index + 1) * signal_height
         plot_top = signal_top + TOP_MARGIN
         plot_bottom = signal_bottom - BOTTOM_MARGIN
-        plot_height = plot_bottom - plot_top
+        plot_height = max(plot_bottom - plot_top, 1)  # 0 방지
         
-        # 파형의 최대/최소값으로 정규화
+        # 파형의 최대/최소값으로 정규화 (안정적인 Y 좌표)
         min_val = np.min(waveform)
         max_val = np.max(waveform)
-        value_range = max(max_val - min_val, 1e-5)
+        value_range = max(max_val - min_val, 1e-5)  # 0 방지
         
         normalized_value = (value - min_val) / value_range
         y_pos = plot_bottom - normalized_value * plot_height
         
-        # 호버 정보 업데이트
+        # 호버 정보 업데이트 (더 정확한 값들)
         self.hover_info = {
             'x': int(mouse_x),
             'y': int(y_pos),

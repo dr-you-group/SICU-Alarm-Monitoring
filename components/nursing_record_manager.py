@@ -228,11 +228,11 @@ class NursingRecordManager:
         self.nursing_table.setColumnCount(0)
     
     def setup_nursing_table(self, records):
-        """간호기록 테이블 설정 및 데이터 추가 (엑셀 스타일)"""
+        """간호기록 테이블 설정 및 데이터 추가 (스크롤 방식)"""
         if not records:
             return
         
-        # 기존 컬럼 너비 저장 (만약 테이블이 이미 있는 경우)
+        # 기존 컬럼 너비 저장
         if self.nursing_table.columnCount() > 0:
             for i in range(self.nursing_table.columnCount()):
                 header_item = self.nursing_table.horizontalHeaderItem(i)
@@ -240,10 +240,10 @@ class NursingRecordManager:
                     column_name = header_item.text()
                     self.column_widths[column_name] = self.nursing_table.columnWidth(i)
         
-        # 컬럼 설정 (시행일시를 맨 앞으로, 간호진단프로토콜을 두 번째로)
+        # 컬럼 설정 (시행일시를 맨 앞으로)
         columns = [
             "시행일시",  # 맨 앞
-            "간호진단프로토콜(코드명)",  # 두 번째
+            "간호진단프로토콜(코드명)",
             "간호중재(코드명)",
             "간호활동(코드명)", 
             "간호속성코드(코드명)",
@@ -257,19 +257,9 @@ class NursingRecordManager:
         
         # 데이터 추가
         for row_idx, record in enumerate(records):
-            # 데이터 컬럼들 (시행일시를 맨 앞으로, 간호진단프로토콜을 두 번째로)
-            data_columns = [
-                "시행일시",  # 맨 앞
-                "간호진단프로토콜(코드명)",  # 두 번째
-                "간호중재(코드명)",
-                "간호활동(코드명)",
-                "간호속성코드(코드명)",
-                "속성",
-                "Duty(코드명)"
-            ]
-            
-            for col_idx, column in enumerate(data_columns):
-                item = QTableWidgetItem(str(record.get(column, "")))
+            for col_idx, column in enumerate(columns):
+                value = record.get(column, "")
+                item = QTableWidgetItem(str(value))
                 item.setFlags(item.flags() & ~Qt.ItemIsEditable)  # 읽기 전용
                 self.nursing_table.setItem(row_idx, col_idx, item)
         
@@ -280,41 +270,41 @@ class NursingRecordManager:
         
         # 저장된 컬럼 너비 복원 또는 기본 너비 설정
         default_widths = {
-            "시행일시": 150,  # 맨 앞
-            "간호진단프로토콜(코드명)": 200,  # 두 번째
-            "간호중재(코드명)": 200,
-            "간호활동(코드명)": 200, 
-            "간호속성코드(코드명)": 200,
-            "속성": 150,
-            "Duty(코드명)": 150
+            "시행일시": 140,
+            "간호진단프로토콜(코드명)": 180,
+            "간호중재(코드명)": 180,
+            "간호활동(코드명)": 180, 
+            "간호속성코드(코드명)": 180,
+            "속성": 120,
+            "Duty(코드명)": 120
         }
         
         for i, column_name in enumerate(columns):
             if column_name in self.column_widths:
-                # 저장된 너비 사용
                 self.nursing_table.setColumnWidth(i, self.column_widths[column_name])
             else:
-                # 기본 너비 사용
                 self.nursing_table.setColumnWidth(i, default_widths[column_name])
         
-        # 날짜/시간 컬럼 정렬 (시행일시가 첫 번째 컬럼이므로)
-        self.nursing_table.sortByColumn(0, Qt.AscendingOrder)  # 첫 번째 컬럼(시행일시)로 정렬
+        # 시행일시 기준으로 정렬
+        self.nursing_table.sortByColumn(0, Qt.AscendingOrder)
         
         # 원본 데이터 저장
         self.original_data = records
         
-        # 헤더 컴텍스트 메뉴 설정 (엑셀 스타일 필터)
+        # 헤더 컨텍스트 메뉴 설정 (엑셀 스타일 필터)
         header.setContextMenuPolicy(Qt.CustomContextMenu)
         header.customContextMenuRequested.connect(self.show_column_filter_menu)
         
-        # 컬럼 필터 초기화 - 처음에는 모든 값이 선택된 상태
+        # 컬럼 필터 초기화
         self.column_filters = {}
         for i in range(self.nursing_table.columnCount()):
             column_name = self.nursing_table.horizontalHeaderItem(i).text()
-            self.column_filters[column_name] = "ALL_SELECTED"  # 초기에는 모든 값 선택된 상태
+            self.column_filters[column_name] = "ALL_SELECTED"
         
-        # 컬럼 너비 변경 시 저장하는 시그널 연결
+        # 컬럼 너비 변경 시 저장
         header.sectionResized.connect(self.save_column_width)
+        
+        print(f"간호기록 로드 완료: {len(records)}개 기록 (±30분 범위, 스크롤 방식)")
     
     def save_column_width(self, logical_index, old_size, new_size):
         """컬럼 너비 변경 시 저장"""
