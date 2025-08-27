@@ -70,7 +70,7 @@ class PatientDataJson:
             del self.loaded_patients[patient_id]
         return self._load_patient_data(patient_id)
     
-    def save_patient_data(self, patient_id: str, backup: bool = True):
+    def save_patient_data(self, patient_id: str, backup: bool = False):
         """특정 환자의 데이터를 JSON 파일에 저장"""
         if patient_id not in self.loaded_patients:
             print(f"로드되지 않은 환자 데이터: {patient_id}")
@@ -79,13 +79,6 @@ class PatientDataJson:
         patient_file = self.data_dir / f"{patient_id}.json"
         
         try:
-            # 백업 생성
-            if backup and patient_file.exists():
-                backup_path = patient_file.with_suffix('.json.backup')
-                import shutil
-                shutil.copy2(patient_file, backup_path)
-                print(f"백업 파일 생성: {backup_path}")
-            
             # JSON 파일 저장
             with open(patient_file, 'w', encoding='utf-8') as f:
                 json.dump(self.loaded_patients[patient_id], f, ensure_ascii=False, indent=4)
