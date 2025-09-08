@@ -33,6 +33,7 @@ class PatientListWidget(QTreeWidget):
         self.setHeaderLabel("Patient List")
         self.setMaximumWidth(PATIENT_LIST_WIDTH)
         self.setMinimumWidth(PATIENT_LIST_WIDTH)
+        self.current_alarm_item = None  # 현재 선택된 알람 아이템 추적
         
         # 다크 테마 스타일
         self.setStyleSheet("""
@@ -185,6 +186,7 @@ class PatientListWidget(QTreeWidget):
         """아이템 클릭 처리"""
         data = item.data(0, Qt.UserRole)
         if data and data.get('type') == 'alarm':
+            self.current_alarm_item = item  # 현재 선택된 알람 아이템 저장
             # 알람 클릭 시 신호 발생
             self.alarmSelected.emit(
                 data['patient_id'],
@@ -194,6 +196,84 @@ class PatientListWidget(QTreeWidget):
                 data['alarm_data']
             )
             print(f"알람 선택: {data['patient_id']} - {data['alarm_data']['color']} {data['time_str']}")
+    
+    def select_next_alarm(self):
+        """다음 알람으로 이동"""
+        if not self.current_alarm_item:
+            return False
+        
+        # 현재 아이템의 다음 알람 찾기
+        next_item = self.find_next_alarm_item(self.current_alarm_item)
+        
+        if next_item:
+            # 다음 알람 선택
+            self.setCurrentItem(next_item)
+            self.on_item_clicked(next_item, 0)
+            return True
+        
+        return False
+    
+    def find_next_alarm_item(self, current_item):
+        """트리에서 다음 알람 아이템 찾기"""
+        # 현재 아이템의 부모(날짜 노드)
+        date_parent = current_item.parent()
+        if not date_parent:
+            return None
+        
+        # 같은 날짜 내에서 다음 알람 찾기
+        current_index = date_parent.indexOfChild(current_item)
+        if current_index < date_parent.childCount() - 1:
+            # 같은 날짜의 다음 알람이 있음
+            return date_parent.child(current_index + 1)
+        
+        # 다음 날짜 찾기
+        admission_parent = date_parent.parent()
+        if not admission_parent:
+            return None
+        
+        date_index = admission_parent.indexOfChild(date_parent)
+        
+        # 같은 입원 기간 내 다음 날짜 확인
+        for i in range(date_index + 1, admission_parent.childCount()):
+            next_date = admission_parent.child(i)
+            if next_date.childCount() > 0:
+                # 다음 날짜의 첫 번째 알람 반환
+                return next_date.child(0)
+        
+        # 다음 입원 기간 찾기
+        patient_parent = admission_parent.parent()
+        if not patient_parent:
+            return None
+        
+        admission_index = patient_parent.indexOfChild(admission_parent)
+        
+        # 같은 환자의 다음 입원 기간 확인
+        for i in range(admission_index + 1, patient_parent.childCount()):
+            next_admission = patient_parent.child(i)
+            # 입원 기간의 첫 번째 날짜 찾기
+            for j in range(next_admission.childCount()):
+                date_node = next_admission.child(j)
+                if date_node.childCount() > 0:
+                    # 첫 번째 알람 반환
+                    return date_node.child(0)
+        
+        # 다음 환자 찾기
+        root_index = self.indexOfTopLevelItem(patient_parent)
+        
+        # 다음 환자들 확인
+        for i in range(root_index + 1, self.topLevelItemCount()):
+            next_patient = self.topLevelItem(i)
+            # 환자의 첫 번째 입원 기간
+            for j in range(next_patient.childCount()):
+                admission_node = next_patient.child(j)
+                # 입원 기간의 첫 번째 날짜
+                for k in range(admission_node.childCount()):
+                    date_node = admission_node.child(k)
+                    if date_node.childCount() > 0:
+                        # 첫 번째 알람 반환
+                        return date_node.child(0)
+        
+        return None  # 더 이상 알람이 없음
 
 
 class SICUMonitoring(QMainWindow):
@@ -624,6 +704,18 @@ class SICUMonitoring(QMainWindow):
         
         # 즉시 저장
         self.save_annotation_immediate(status)
+        
+        # True나 False일 때만 다음 알람으로 이동 (None일 때는 이동하지 않음)
+        if status is not None:
+            # 약간의 지연 후 다음 알람으로 이동 (저장이 완료되도록)
+            QTimer.singleShot(100, self.move_to_next_alarm)
+    
+    def move_to_next_alarm(self):
+        """다음 알람으로 이동"""
+        if self.patient_list.select_next_alarm():
+            print("다음 알람으로 이동했습니다.")
+        else:
+            print("더 이상 알람이 없습니다.")
     
     def connectSignals(self):
         """시그널 연결"""
@@ -705,24 +797,7 @@ class SICUMonitoring(QMainWindow):
         self.record_info_label.setVisible(False)
         self.nursing_table.setVisible(True)
     
-    def set_classification(self, status):
-        """Classification 상태 설정"""
-        if status is None:
-            status_text = "None"
-            self.classification_status_label.setStyleSheet("")
-        elif status:
-            status_text = "True"
-            self.classification_status_label.setStyleSheet("color: red;")
-        else:
-            status_text = "False"
-            self.classification_status_label.setStyleSheet("color: blue;")
-        
-        self.classification_status_label.setText(status_text)
-        
-        print(f"Classification 설정: {status_text}")
-        
-        # 즉시 저장
-        self.save_annotation_immediate(status)
+
     
     def hide_content(self):
         """콘텐츠 숨김"""

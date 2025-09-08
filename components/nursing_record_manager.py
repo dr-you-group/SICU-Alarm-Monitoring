@@ -244,11 +244,12 @@ class NursingRecordManager:
         columns = [
             "시행일시",  # 맨 앞
             "간호진단프로토콜(코드명)",
-            "간호중재(코드명)",
+            # "간호중재(코드명)",
             "간호활동(코드명)", 
             "간호속성코드(코드명)",
+            "간호속성명칭",
             "속성",
-            "Duty(코드명)"
+            # "Duty(코드명)"
         ]
         
         self.nursing_table.setColumnCount(len(columns))
@@ -272,11 +273,12 @@ class NursingRecordManager:
         default_widths = {
             "시행일시": 140,
             "간호진단프로토콜(코드명)": 180,
-            "간호중재(코드명)": 180,
+            # "간호중재(코드명)": 180,
             "간호활동(코드명)": 180, 
             "간호속성코드(코드명)": 180,
+            "간호속성명칭": 180,
             "속성": 120,
-            "Duty(코드명)": 120
+            # "Duty(코드명)": 120
         }
         
         for i, column_name in enumerate(columns):
