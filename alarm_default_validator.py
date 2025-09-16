@@ -191,7 +191,7 @@ class AlarmValidator:
                             patient_id, admission_id, date_str, alarm['time']
                         )
                         if existing_annotation['classification'] is not None:
-                            # 이미 수동으로 라벨링된 경우 건너뛰기
+                            # 이미 라벨링된 경우 건너뛰기
                             continue
                         
                         # 간호기록 가져오기

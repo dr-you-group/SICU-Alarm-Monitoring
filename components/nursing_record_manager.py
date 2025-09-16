@@ -3,6 +3,7 @@ from PySide6.QtWidgets import (QTableWidget, QTableWidgetItem, QHeaderView, QDia
 from PySide6.QtCore import Qt, QTimer
 from data_structure import patient_data
 from datetime import datetime, timedelta
+import pandas as pd
 
 # 엑셀 스타일 컬럼 필터 다이얼로그 클래스
 class ExcelColumnFilterDialog(QDialog):
@@ -219,6 +220,10 @@ class NursingRecordManager:
         # 데이터 구조에서 선택된 알람 시간 기준 ±30분 범위의 간호기록 가져오기
         records = patient_data.get_nursing_records_for_alarm(patient_id, timestamp)
         
+        print(f"DEBUG: 받은 간호기록 개수: {len(records) if records else 0}개")
+        if records and len(records) > 0:
+            print(f"DEBUG: 첫 번째 간호기록: {records[0] if isinstance(records[0], dict) else type(records[0])}")
+        
         # 간호기록 테이블에 데이터 추가
         self.setup_nursing_table(records)
     
@@ -240,17 +245,43 @@ class NursingRecordManager:
                     column_name = header_item.text()
                     self.column_widths[column_name] = self.nursing_table.columnWidth(i)
         
+        # 먼저 첫 번째 기록에서 사용 가능한 컬럼 확인
+        if records and len(records) > 0:
+            first_record = records[0]
+            if isinstance(first_record, dict):
+                available_keys = list(first_record.keys())
+                print(f"DEBUG: 간호기록에서 사용 가능한 키: {available_keys}")
+        
         # 컬럼 설정 (시행일시를 맨 앞으로)
-        columns = [
+        # PKL 파일의 간호기록 구조에 맞춤
+        # 기본 컬럼 설정 (실제 데이터에 따라 조정 필요)
+        default_columns = [
             "시행일시",  # 맨 앞
             "간호진단프로토콜(코드명)",
-            # "간호중재(코드명)",
             "간호활동(코드명)", 
             "간호속성코드(코드명)",
             "간호속성명칭",
             "속성",
-            # "Duty(코드명)"
+            "속성Text"
         ]
+        
+        # 실제 데이터에 있는 컬럼만 사용
+        columns = []
+        if records and len(records) > 0 and isinstance(records[0], dict):
+            # 실제 데이터에 있는 컬럼만 추가
+            for col in default_columns:
+                if col in records[0]:
+                    columns.append(col)
+            
+            # 기본 컬럼에 없는 추가 컬럼 확인
+            for key in records[0].keys():
+                if key not in columns:
+                    print(f"DEBUG: 추가 컬럼 발견: {key}")
+        
+        # 컬럼이 없으면 기본값 사용
+        if not columns:
+            columns = default_columns
+            print(f"DEBUG: 기본 컬럼 사용")
         
         self.nursing_table.setColumnCount(len(columns))
         self.nursing_table.setHorizontalHeaderLabels(columns)
@@ -260,7 +291,12 @@ class NursingRecordManager:
         for row_idx, record in enumerate(records):
             for col_idx, column in enumerate(columns):
                 value = record.get(column, "")
-                item = QTableWidgetItem(str(value))
+                # null/None 값을 빈 문자열로 처리
+                if value is None or (isinstance(value, float) and pd.isna(value)):
+                    display_value = ""
+                else:
+                    display_value = str(value)
+                item = QTableWidgetItem(display_value)
                 item.setFlags(item.flags() & ~Qt.ItemIsEditable)  # 읽기 전용
                 self.nursing_table.setItem(row_idx, col_idx, item)
         
@@ -273,12 +309,11 @@ class NursingRecordManager:
         default_widths = {
             "시행일시": 140,
             "간호진단프로토콜(코드명)": 180,
-            # "간호중재(코드명)": 180,
             "간호활동(코드명)": 180, 
             "간호속성코드(코드명)": 180,
             "간호속성명칭": 180,
             "속성": 120,
-            # "Duty(코드명)": 120
+            "속성Text": 200
         }
         
         for i, column_name in enumerate(columns):
@@ -331,14 +366,17 @@ class NursingRecordManager:
         
         column_name = self.nursing_table.horizontalHeaderItem(column_index).text()
         
-        # 해당 컬럼의 고유한 값들 수집
+        # 해당 컬럼의 고유한 값들 수집 (빈 값도 포함하지만 필터에서는 표시하지 않음)
         unique_values = set()
+        has_empty = False
         for row in range(self.nursing_table.rowCount()):
             item = self.nursing_table.item(row, column_index)
             if item:
                 value = item.text().strip()
-                if value:  # 빈 값 제외
+                if value:  # 빈 값이 아닌 경우만 추가
                     unique_values.add(value)
+                else:
+                    has_empty = True  # 빈 값이 있음을 기록
         
         # 현재 선택된 값들 가져오기
         current_selected = self.column_filters.get(column_name, "ALL_SELECTED")

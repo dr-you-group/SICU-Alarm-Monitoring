@@ -1,0 +1,87 @@
+{PatientID=AlsUnitNo}.pkl
+
+    ABP_WAVEFORM : ABP
+    ECG_WAVEFORM : Lead-II
+    PPG_WAVEFORM : PPG
+    RESP_WAVEFORM: Resp
+
+    SpO2_numeric
+    Pulse_numeric
+    ST_numeric
+    Tskin_numeric
+    ABP_numeric
+    NBP_numeric
+    # Perf_numeric
+    # PPV_numeric
+    HR_numeric
+    RR_numeric
+    # PVC_numeric
+    # BTBHR_numeric
+
+    Severity
+    SeverityColor
+
+    NursingRecords_ba30 (+-30분 간호기록 리스트) [
+        {
+            시행일시: TimeStamp, 
+            간호진단프로토콜(코드명): AssessmentNm, 
+            간호활동(코드명): ImplementationNm,
+            간호속성코드(코드명): AttributeNm,
+            간호속성명칭: AttributeDetail,
+            속성: AttributeDetailValue,
+            속성Text: AttributeDetailValue2
+        },
+    ]
+
+
+    # --- 기존에 없는, 뷰어와 연동되는 데이터 값 추가 ---
+
+    AdmissionIn
+    AdmissionOut
+
+    isView (뷰어에서 보였던 알람인지) : True/False
+    isAlarm (알람 진위 여부, Default=False) : True/False
+    Comment (코멘트 작성, Default=''): string
+    isSelected (뷰어에서 버튼 클릭으로 선택되었는가?, Default=False): True/False
+
+
+원래 이거 json 으로 읽어오는거였잖아, 근데 지금부터는 pkl 파일에서 읽어와야해.
+
+
+AlsUnitNo
+TimeStamp
+DatSeq
+Label
+Severity
+SeverityColor
+ABP_WAVEFORM
+ECG_WAVEFORM
+PPG_WAVEFORM
+RESP_WAVEFORM
+ABP_time_diff_sec
+II_time_diff_sec
+Pleth_time_diff_sec
+Resp_time_diff_sec
+SpO2_numeric
+Pulse_numeric
+ST_numeric
+Tskin_numeric
+ABP_numeric
+NBP_numeric
+HR_numeric
+RR_numeric
+SpO2_numeric_time_diff_sec
+Pulse_numeric_time_diff_sec
+ST_numeric_time_diff_sec
+Tskin_numeric_time_diff_sec
+ABP_numeric_time_diff_sec
+NBP_numeric_time_diff_sec
+HR_numeric_time_diff_sec
+RR_numeric_time_diff_sec
+NursingRecords_ba30
+AdmissionIn
+AdmissionOut
+isView
+isSelected
+isAlarm
+Comment

@@ -1,5 +1,6 @@
 import sys
 import numpy as np
+import pandas as pd
 from PySide6.QtWidgets import QWidget, QToolTip, QTableWidgetItem
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter, QPainterPath, QPen, QColor, QFont, QBrush
@@ -356,23 +357,26 @@ class WaveformManager:
         
         numeric_data = waveform_data["Numeric"]
         
+        # PKL 파일의 Numeric 데이터 구조: 이미 [value, time_diff_sec] 형태
         # 데이터 입력 (최대 8개)
         for row, (parameter, data) in enumerate(list(numeric_data.items())[:8]):
             # 데이터 구조: [value, time_diff_sec]
             if isinstance(data, (list, tuple)) and len(data) >= 2:
                 value, time_diff_sec = data[0], data[1]
             else:
-                # 예상치 못한 데이터 구조의 경우 기본값 사용
-                value = data if not isinstance(data, (list, tuple)) else data[0] if len(data) > 0 else 0
-                time_diff_sec = data[1] if isinstance(data, (list, tuple)) and len(data) > 1 else 0
+                # 단일 값인 경우 time_diff를 0으로 설정
+                value = data if not isinstance(data, (list, tuple)) else data[0] if len(data) > 0 else None
+                time_diff_sec = 0
             
             # Parameter 컬럼
             param_item = QTableWidgetItem(str(parameter))
             param_item.setFlags(param_item.flags() & ~Qt.ItemIsEditable)  # 읽기 전용
             self.numeric_table.setItem(row, 0, param_item)
             
-            # Value 컬럼 (숫자 값에 따른 포맷팅)
-            if isinstance(value, float):
+            # Value 컬럼 (NaN/None 처리 추가)
+            if pd.isna(value) or value is None:
+                value_text = "None"
+            elif isinstance(value, float):
                 value_text = f"{value:.2f}"
             else:
                 value_text = str(value)
@@ -382,8 +386,10 @@ class WaveformManager:
             
             self.numeric_table.setItem(row, 1, value_item)
             
-            # Time Diff Sec 컬럼
-            if isinstance(time_diff_sec, float):
+            # Time Diff Sec 컬럼 (NaN/None 처리 추가)
+            if pd.isna(time_diff_sec) or time_diff_sec is None:
+                time_text = "None"
+            elif isinstance(time_diff_sec, float):
                 time_text = f"{time_diff_sec:.3f}"
             else:
                 time_text = str(time_diff_sec)
