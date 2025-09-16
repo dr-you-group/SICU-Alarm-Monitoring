@@ -1,0 +1,165 @@
+AlarmLabelList
+A Lead Off
+ABP Artifact
+ABP Change Scale
+ABP Deactivated
+ABP Disconnect
+ABP Equip Malf
+ABP No Pulse
+ABP No Transducer
+ABP Noisy Signal
+ABP Overrange
+ABP Unplugged
+ABP Zero+Check Cal
+ABPd ValueComparision
+ABPm ValueComparision
+ABPs ValueComparision
+AFIB
+ART Artifact
+ART Change Scale
+ART Disconnect
+ART Equip Malf
+ART No Pulse
+ART No Transducer
+ART Noisy Signal
+ART Overrange
+ART Unplugged
+ART Zero+Check Cal
+ARTm ValueComparision
+ARTs ValueComparision
+Alarms Paused
+Apnea mm:ss
+Asystole
+CO2 Auto Zero
+CO2 Change Scale
+CO2 No Tubing
+CO2 Occlusion
+CO2 Pump Off
+CO2 Purging
+CVP Artifact
+CVP Change Scale
+CVP Equip Malf
+CVP No Transducer
+CVP Overrange
+CVP Unplugged
+CVP Zero+Check Cal
+CVPm ValueComparision
+Cannot Analyze ECG
+Cannot Analyze QT
+Cannot Analyze ST
+Check Mouse
+Check Patient ID
+Check Touchscreen
+Chk SyncOut Cable
+Desat ValueComparision
+E Lead Off
+ECG Check Cable
+ECG Leads Off
+ECG Noisy Elec RA
+ECG NoisySignal
+ECG/Arrh AlarmsOff
+End AFIB
+End Irregular HR
+FMS Msmt Malf
+FMS Unplugged
+HR ValueComparision
+I Lead Off
+IPI Check Sources
+IPI Neo Patient
+IPI ValueComparision
+Irregular HR
+LA Lead Off
+LL Lead Off
+MMS Unplugged
+Missed Beat
+Multiform PVCs
+NBP Check Cuff
+NBP Cuff Overpress
+NBP Equip Malf
+NBP Interrupted
+NBP Measure Failed
+NBPm ValueComparision
+NBPs ValueComparision
+No Data Monitor
+Non-Sustain VT
+P No Transducer
+P Zero+Check Cal
+PAP Artifact
+PAP Change Scale
+PAP Disconnect
+PAP No Pulse
+PAP No Transducer
+PAP Noisy Signal
+PAP Overrange
+PAP Unplugged
+PAP Zero+Check Cal
+PAPd ValueComparision
+PAPm ValueComparision
+PAPs ValueComparision
+PPV Chk Sources
+PPV bad ABP Signal
+PVCs/min ValueComparision
+Pacer Not Capt
+Pacer Not Pacing
+Pair PVCs
+Pulse ValueComparision
+RA Lead Off
+RL Lead Off
+RR ValueComparision
+Resp Leads Off
+Run PVCs High
+S Lead Off
+ST Multi Channels
+ST-II ValueComparision
+ST-III ValueComparision
+Some ECG AlarmsOff
+SpO2 Chk Sensor
+SpO2 Erratic
+SpO2 Extd.Update
+SpO2 Interference
+SpO2 Low Perf
+SpO2 No Pulse
+SpO2 No Sensor
+SpO2 NoisySignal
+SpO2 Poor Signal
+SpO2 Pulse
+SpO2 Searching
+SpO2 Sensor Malf
+SpO2 Sensor Off
+SpO2 Unkn.Sensor
+SpO2 ValueComparision
+SpO2po Extd.Update
+SpO2po Low Perf
+SpO2po No Pulse
+SpO2po No Sensor
+SpO2po NoisySignal
+SpO2po Poor Signal
+SpO2po Pulse
+SpO2po Searching
+SpO2po ValueComparision
+Standby
+Tachy/P ValueComparision
+Tcore NoTransducer
+Temp Deactivated
+Temp NoTransducer
+Temp Unplugged
+Temp ValueComparision
+Tesoph ValueComparision
+TesophNoTransducer
+Tskin NoTransducer
+Tskin Overrange
+Tskin Unplugged
+Tskin ValueComparision
+Unsupported LAN
+V Lead Off
+VTach
+Vent Bigeminy
+Vent Fib/Tach
+Vent Rhythm
+X3 Unplugged
+Yellow Al. Paused
+awRR ValueComparision
+etCO2 ValueComparision
+imCO2 ValueComparision
+xBrady ValueComparision
+xTachy ValueComparision

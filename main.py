@@ -821,11 +821,11 @@ class SICUMonitoring(QMainWindow):
             self.classification_status_label.setText("False")
             self.classification_status_label.setStyleSheet("color: blue;")
         
-        # 메모리에 즉시 저장 (비동기로 파일 저장)
+        # 즉시 저장 (메모리 + 파일)
         self.save_annotation_immediate(status)
         
-        # UI가 블로킹되지 않도록 QTimer를 사용하여 비동기로 다음 알람으로 이동
-        QTimer.singleShot(1, self.move_to_next_alarm)  # 1ms 후 다음 알람으로 이동 (즉각적)
+        # 즉시 다음 알람으로 이동
+        self.move_to_next_alarm()
     
     def move_to_next_alarm(self):
         """다음 알람으로 이동"""
@@ -839,15 +839,14 @@ class SICUMonitoring(QMainWindow):
         self.false_button.clicked.connect(lambda: self.set_classification(False))
     
     def on_alarm_selected(self, patient_id, admission_id, date_str, time_str, alarm_data):
-        """알람 선택 처리 (최적화)"""
-        # 현재 알람 정보만 빠르게 업데이트
+        """알람 선택 처리"""
         self.current_patient_id = patient_id
         self.current_admission_id = admission_id
         self.current_date_str = date_str
         self.current_time_str = time_str
         self.current_alarm_data = alarm_data
         
-        # UI 업데이트는 최소화
+        # 선택된 알람 정보 표시
         timestamp = f"{date_str} {time_str}"
         alarm_text = f"Patient: {patient_id} | {alarm_data['color']} | {timestamp}"
         
@@ -856,16 +855,16 @@ class SICUMonitoring(QMainWindow):
         
         self.selected_alarm_label.setText(alarm_text)
         
-        # 색상 스타일
+        # 색상에 따른 스타일 적용
         if alarm_data['color'] in ALARM_COLORS:
             color = ALARM_COLORS[alarm_data['color']]
             self.selected_alarm_label.setStyleSheet(f"font-size: 16px; font-weight: bold; color: {color};")
         
-        # annotation 빠른 로드 (캐시에서)
+        # 저장된 annotation 로드
         annotation = patient_data.get_alarm_annotation(patient_id, admission_id, date_str, time_str)
         classification = annotation['classification']
         
-        # Classification UI만 업데이트
+        # Classification 상태 업데이트
         if classification is None:
             self.classification_status_label.setText("None")
             self.classification_status_label.setStyleSheet("")
@@ -882,10 +881,9 @@ class SICUMonitoring(QMainWindow):
         # 콘텐츠 표시
         self.show_content()
         
-        # 무거운 데이터 로드는 지연 실행 (QTimer 사용)
-        # 이렇게 하면 UI가 먼저 업데이트되고 데이터는 비동기로 로드
-        QTimer.singleShot(1, lambda: self.waveform_manager.load_waveform_data(patient_id, timestamp))
-        QTimer.singleShot(1, lambda: self.nursing_manager.load_nursing_record(patient_id, timestamp))
+        # 파형 데이터와 간호기록 로드
+        self.waveform_manager.load_waveform_data(patient_id, timestamp)
+        self.nursing_manager.load_nursing_record(patient_id, timestamp)
     
     def show_content(self):
         """콘텐츠 표시"""
@@ -918,11 +916,10 @@ class SICUMonitoring(QMainWindow):
         self.nursing_table.setVisible(False)
     
     def save_annotation_immediate(self, classification):
-        """즉시 annotation 저장 (메모리 즉시, 파일은 비동기)"""
+        """즉시 annotation 저장"""
         if self.current_patient_id and self.current_time_str:
             comment = self.comment_text.text()
             
-            # set_alarm_annotation은 내부적으로 비동기 저장을 사용
             success = patient_data.set_alarm_annotation(
                 self.current_patient_id,
                 self.current_admission_id,
@@ -933,7 +930,7 @@ class SICUMonitoring(QMainWindow):
             )
             
             if success:
-                # 환자 리스트 통계 즉시 업데이트 (UI는 메모리 기반)
+                # 환자 리스트 통계 업데이트
                 self.patient_list.refresh_patient_stats()
     
     def save_annotation(self):

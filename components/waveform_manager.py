@@ -331,12 +331,18 @@ class WaveformManager:
         # 데이터 구조에서 파형 데이터 가져오기
         waveform_data = patient_data.get_waveform_data(patient_id, timestamp)
         
+        print(f"DEBUG WaveformManager: Received waveform_data = {waveform_data is not None}")
+        if waveform_data:
+            print(f"DEBUG WaveformManager: waveform_data keys = {list(waveform_data.keys())}")
+        
         # 파형 위젯에 데이터 설정
         self.waveform_widget.set_waveform_data(waveform_data)
         
         # Numeric 데이터 처리
         if self.numeric_table is not None and waveform_data:
             self.load_numeric_data(waveform_data)
+        else:
+            print(f"DEBUG WaveformManager: numeric_table = {self.numeric_table is not None}, waveform_data = {waveform_data is not None}")
     
     def load_numeric_data(self, waveform_data):
         """Numeric 데이터를 8행 고정 테이블에 로드"""
