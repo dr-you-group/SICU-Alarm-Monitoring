@@ -326,14 +326,8 @@ class WaveformManager:
         self.numeric_info_label = numeric_info_label
     
     def load_waveform_data(self, patient_id, timestamp):
-        print(f"파형 데이터 로드: {timestamp}")
-        
         # 데이터 구조에서 파형 데이터 가져오기
         waveform_data = patient_data.get_waveform_data(patient_id, timestamp)
-        
-        print(f"DEBUG WaveformManager: Received waveform_data = {waveform_data is not None}")
-        if waveform_data:
-            print(f"DEBUG WaveformManager: waveform_data keys = {list(waveform_data.keys())}")
         
         # 파형 위젯에 데이터 설정
         self.waveform_widget.set_waveform_data(waveform_data)
@@ -341,8 +335,6 @@ class WaveformManager:
         # Numeric 데이터 처리
         if self.numeric_table is not None and waveform_data:
             self.load_numeric_data(waveform_data)
-        else:
-            print(f"DEBUG WaveformManager: numeric_table = {self.numeric_table is not None}, waveform_data = {waveform_data is not None}")
     
     def load_numeric_data(self, waveform_data):
         """Numeric 데이터를 8행 고정 테이블에 로드"""
@@ -408,5 +400,3 @@ class WaveformManager:
         if self.numeric_info_label:
             self.numeric_info_label.setVisible(False)
         self.numeric_table.setVisible(True)
-        
-        print(f"Numeric 데이터 로드 완료: {len(numeric_data)}개 파라미터 (8행 3컴럼 테이블)")

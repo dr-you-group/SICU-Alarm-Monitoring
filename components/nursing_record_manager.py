@@ -212,17 +212,13 @@ class NursingRecordManager:
         self.column_widths = {}  # 컬럼 너비 저장
     
     def load_nursing_record(self, patient_id, timestamp):
-        print(f"간호기록 로드: {timestamp}")
+        # 간호기록 로드
         
         # 기존 간호기록 지우기
         self.clear_nursing_records()
         
         # 데이터 구조에서 선택된 알람 시간 기준 ±30분 범위의 간호기록 가져오기
         records = patient_data.get_nursing_records_for_alarm(patient_id, timestamp)
-        
-        print(f"DEBUG: 받은 간호기록 개수: {len(records) if records else 0}개")
-        if records and len(records) > 0:
-            print(f"DEBUG: 첫 번째 간호기록: {records[0] if isinstance(records[0], dict) else type(records[0])}")
         
         # 간호기록 테이블에 데이터 추가
         self.setup_nursing_table(records)
@@ -248,9 +244,6 @@ class NursingRecordManager:
         # 먼저 첫 번째 기록에서 사용 가능한 컬럼 확인
         if records and len(records) > 0:
             first_record = records[0]
-            if isinstance(first_record, dict):
-                available_keys = list(first_record.keys())
-                print(f"DEBUG: 간호기록에서 사용 가능한 키: {available_keys}")
         
         # 컬럼 설정 (시행일시를 맨 앞으로)
         # PKL 파일의 간호기록 구조에 맞춤
@@ -276,12 +269,11 @@ class NursingRecordManager:
             # 기본 컬럼에 없는 추가 컬럼 확인
             for key in records[0].keys():
                 if key not in columns:
-                    print(f"DEBUG: 추가 컬럼 발견: {key}")
+                    pass  # 추가 컬럼 무시
         
         # 컬럼이 없으면 기본값 사용
         if not columns:
             columns = default_columns
-            print(f"DEBUG: 기본 컬럼 사용")
         
         self.nursing_table.setColumnCount(len(columns))
         self.nursing_table.setHorizontalHeaderLabels(columns)
@@ -349,7 +341,6 @@ class NursingRecordManager:
         if header_item:
             column_name = header_item.text()
             self.column_widths[column_name] = new_size
-            print(f"컬럼 '{column_name}' 너비 저장: {new_size}")
     
     def show_column_filter_menu(self, position):
         """컬럼 헤더 우클릭 시 엑셀 스타일 필터 메뉴 표시"""

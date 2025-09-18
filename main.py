@@ -75,6 +75,10 @@ class PatientListWidget(QTreeWidget):
             # 환자 통계 정보 가져오기
             stats = patient_data.get_patient_alarm_stats(patient_id)
             
+            # 데이터가 없는 환자는 건너뛰기 (0/0인 경우)
+            if stats['total'] == 0:
+                continue
+            
             # 환자 노드 생성
             patient_item = QTreeWidgetItem(self)
             patient_item.setText(0, f"{patient_id} ({stats['labeled']}/{stats['total']})")
@@ -144,13 +148,25 @@ class PatientListWidget(QTreeWidget):
     
     def refresh_patient_stats(self):
         """환자 통계 정보 새로고침 (라벨링 후 호출)"""
+        items_to_remove = []
+        
         for i in range(self.topLevelItemCount()):
             patient_item = self.topLevelItem(i)
             data = patient_item.data(0, Qt.UserRole)
             if data and data.get('type') == 'patient':
                 patient_id = data['patient_id']
                 stats = patient_data.get_patient_alarm_stats(patient_id)
-                patient_item.setText(0, f"{patient_id} ({stats['labeled']}/{stats['total']})")
+                
+                # 데이터가 없는 환자는 제거 대상에 추가 (0/0인 경우)
+                if stats['total'] == 0:
+                    items_to_remove.append(patient_item)
+                else:
+                    patient_item.setText(0, f"{patient_id} ({stats['labeled']}/{stats['total']})")
+        
+        # 0/0인 환자 아이템들 제거
+        for item in items_to_remove:
+            index = self.indexOfTopLevelItem(item)
+            self.takeTopLevelItem(index)
         
         # 알람 아이템들의 상태 아이콘도 업데이트
         self.refresh_alarm_status_icons()
