@@ -1,3 +1,6 @@
+output
+sicu_alarms.db
+.vscode/
 DATA_origin/
 DATA_BACKUP/
 DATA.zip

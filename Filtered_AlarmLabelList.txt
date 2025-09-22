@@ -42,8 +42,10 @@ S Lead Off
 Some ECG AlarmsOff
 SpO2 Chk Sensor
 SpO2 Interference
+SpO2 No Pulse
 SpO2 Low Perf
 SpO2 No Sensor
+SpO2 Poor Signal
 SpO2 NoisySignal
 SpO2 Sensor Malf
 SpO2 Sensor Off
@@ -52,3 +54,4 @@ Temp Unplugged
 TesophNoTransducer
 Tskin NoTransducer
 Tskin Unplugged
+Cannot Analyze QT
